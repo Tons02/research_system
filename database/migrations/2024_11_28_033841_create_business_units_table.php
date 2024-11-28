@@ -13,19 +13,18 @@ return new class extends Migration
     {
         Schema::create('business_units', function (Blueprint $table) {
             $table->increments('id');
-            $table->bigInteger('sync_id');
+            $table->bigInteger('sync_id')->unique();
             $table->string('business_unit_code');
             $table->string('business_unit_name');
-            $table->unsignedInteger('company_id')->index();
+            $table->bigInteger('company_id')->index();
 
             $table->foreign("company_id")
-            ->references("id")
+            ->references("sync_id")
             ->on("companies")
             ->onDelete('cascade');
 
-
-            $table->boolean('is_active');
             $table->timestamps();
+            $table->softdeletes();
         });
     }
 

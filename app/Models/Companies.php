@@ -19,12 +19,5 @@ class Companies extends Model
         'deleted_at',
     ];
 
-    protected function casts(): array
-    {
-        return [
-            'is_active' => 'boolean',
-        ];
-    }
-
     protected string $default_filters = CompanyFilter::class;
 }

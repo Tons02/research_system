@@ -13,11 +13,11 @@ return new class extends Migration
     {
         Schema::create('companies', function (Blueprint $table) {
             $table->increments('id');
-            $table->bigInteger('sync_id');
+            $table->bigInteger('sync_id')->unique();
             $table->string('company_code');
             $table->string('company_name');
-            $table->string('is_active');
             $table->timestamps();
+            $table->softdeletes();
         });
     }
 

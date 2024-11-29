@@ -6,7 +6,7 @@ use App\Filters\BusinessUnitFilter;
 use Illuminate\Database\Eloquent\Model;
 use Essa\APIToolKit\Filters\Filterable;
 use Illuminate\Database\Eloquent\softDeletes;
-use App\Models\Companies;
+use App\Models\Department;
 
 class BusinessUnit extends Model
 {
@@ -29,4 +29,7 @@ class BusinessUnit extends Model
     {
         return $this->belongsTo(Companies::class, 'company_id', 'sync_id');
     }
+
+
 }
+

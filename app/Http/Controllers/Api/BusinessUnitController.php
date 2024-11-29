@@ -7,7 +7,6 @@ use Illuminate\Http\Request;
 use App\Http\Requests\BusinessUnitRequest;
 use Essa\APIToolKit\Api\ApiResponse;
 use App\Models\BusinessUnit;
-use App\Http\Resources\BusinessUnitResource;
 
 class BusinessUnitController extends Controller
 {

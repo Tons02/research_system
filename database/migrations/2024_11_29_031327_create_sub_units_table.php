@@ -13,7 +13,17 @@ return new class extends Migration
     {
         Schema::create('sub_units', function (Blueprint $table) {
             $table->id();
+            $table->bigInteger('sync_id')->unique();
+            $table->string('sub_unit_code');
+            $table->string('sub_unit_name');
+            $table->bigInteger('unit_id')->index();
+            $table->foreign("unit_id")
+            ->references("sync_id")
+            ->on("units")
+            ->onDelete('cascade');
+
             $table->timestamps();
+            $table->softdeletes();
         });
     }
 

@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use App\Http\Requests\BusinessUnitRequest;
 use Essa\APIToolKit\Api\ApiResponse;
 use App\Models\BusinessUnit;
+use App\Http\Resources\BusinessUnitResource;
 
 class BusinessUnitController extends Controller
 {
@@ -15,15 +16,16 @@ class BusinessUnitController extends Controller
     public function index(Request $request){
         $status = $request->query('status');
         
-        $Companies = BusinessUnit::
-        when($status === "inactive", function ($query) {
+        $BusinessUnit = BusinessUnit::
+        with('company')
+        ->when($status === "inactive", function ($query) {
             $query->onlyTrashed();
         })
         ->orderBy('created_at', 'desc')
         ->useFilters()
         ->dynamicPaginate();
-
-        return $this->responseSuccess('Companies display successfully', $Companies);
+        
+        return $this->responseSuccess('Business units display successfully', $BusinessUnit );
     }
 
     public function store(BusinessUnitRequest $request){

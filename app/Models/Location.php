@@ -16,15 +16,21 @@ class Location extends Model
         'sync_id',
         'location_code',
         'location_name',
-        'sub_units',
         'updated_at',
         'deleted_at',
     ];
 
     protected string $default_filters = LocationFilter::class;
 
-    public function business_unit()
+    public function sub_unit()
     {
-        return $this->belongsTo(BusinessUnit::class, 'business_unit_id', 'sync_id');
+        return $this->belongsToMany(
+            SubUnit::class,
+            "locations_sub_unit",
+            "sub_unit_id",
+            "location_id",
+            "sync_id",
+            "sync_id"
+        );
     }
 }

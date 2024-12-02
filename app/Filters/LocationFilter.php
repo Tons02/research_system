@@ -6,7 +6,9 @@ use Essa\APIToolKit\Filters\QueryFilters;
 
 class LocationFilter extends QueryFilters
 {
-    protected array $allowedFilters = [];
-
-    protected array $columnSearch = [];
+    protected array $columnSearch = [
+        'sync_id',
+        'location_code',
+        'location_name'
+    ];
 }

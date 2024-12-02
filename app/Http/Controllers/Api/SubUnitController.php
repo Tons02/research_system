@@ -16,7 +16,7 @@ class SubUnitController extends Controller
         $status = $request->query('status');
         
         $SubUnit = SubUnit::
-        with('unit')
+        with(['unit', 'locations'])
         ->when($status === "inactive", function ($query) {
             $query->onlyTrashed();
         })

@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\UnitController;
 use App\Http\Controllers\Api\SubUnitController;
 use App\Http\Controllers\Api\LocationController;
 use App\Http\Controllers\Api\RoleController;
+use App\Http\Controllers\Api\UserController;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -23,7 +24,9 @@ Route::resource("sub-units", SubUnitController::class);
 Route::resource("locations", LocationController::class);
 
 //Role Controller
-Route::put('role-archived/{id}',[RoleController::class,'archived']);
+Route::put('role-archived/{id}', [RoleController::class, 'archived']);
 Route::resource("role", RoleController::class);
 
-
+//User Controller
+Route::put('user-archived/{id}', [UserController::class, 'archived']);
+Route::resource("user", UserController::class);

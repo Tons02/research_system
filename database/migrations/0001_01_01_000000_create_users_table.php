@@ -20,29 +20,33 @@ return new class extends Migration
             $table->string('last_name');
             $table->string('mobile_number')->nullable();
             $table->enum("gender", ["male", "female"]);
-            $table->string('company_id');
+
+            $table->bigInteger('company_id');
+            $table->foreign("company_id")
+            ->references("sync_id")
+            ->on("companies");
             
-            $table->string('business_unit_id');
+            $table->bigInteger('business_unit_id');
             $table->foreign("business_unit_id")
             ->references("sync_id")
             ->on("business_units");
 
-            $table->string('department_id');
+            $table->bigInteger('department_id');
             $table->foreign("department_id")
             ->references("sync_id")
             ->on("departments");
 
-            $table->string('unit_id');
+            $table->bigInteger('unit_id');
             $table->foreign("unit_id")
             ->references("sync_id")
             ->on("units");
 
-            $table->string('sub_unit_id');
+            $table->bigInteger('sub_unit_id');
             $table->foreign("sub_unit_id")
             ->references("sync_id")
             ->on("sub_units");
 
-            $table->string('location_id');
+            $table->bigInteger('location_id');
             $table->foreign("location_id")
             ->references("sync_id")
             ->on("locations");

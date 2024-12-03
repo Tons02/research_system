@@ -7,22 +7,23 @@ use Illuminate\Http\Request;
 use App\Http\Requests\RoleRequest;
 use Essa\APIToolKit\Api\ApiResponse;
 use App\Models\Role;
+use App\Models\User;
 
 class RoleController extends Controller
 {
     use ApiResponse;
-    public function index(Request $request){
+    public function index(Request $request)
+    {
         $status = $request->query('status');
-        
-        $Role = Role::
-        when($status === "inactive", function ($query) {
+
+        $Role = Role::when($status === "inactive", function ($query) {
             $query->onlyTrashed();
         })
-        ->orderBy('created_at', 'desc')
-        ->useFilters()
-        ->dynamicPaginate();
-        
-        return $this->responseSuccess('Role display successfully', $Role );
+            ->orderBy('created_at', 'desc')
+            ->useFilters()
+            ->dynamicPaginate();
+
+        return $this->responseSuccess('Role display successfully', $Role);
     }
 
     public function store(RoleRequest $request)
@@ -36,22 +37,22 @@ class RoleController extends Controller
     }
 
     public function update(RoleRequest $request, $id)
-    {   
+    {
         $role_id = Role::find($id);
 
         if (!$role_id) {
-            return $this->responseNotFound('', 'Invalid ID provided for updating. Please check the ID and try again.');
+            return $this->responseUnprocessable('', 'Invalid ID provided for updating. Please check the ID and try again.');
         }
 
         $role_id->name = $request['name'];
         $role_id->access_permission = $request['access_permission'];
 
-        if (!$role_id->isDirty()) { 
+        if (!$role_id->isDirty()) {
             return $this->responseSuccess('No Changes', $role_id);
         }
 
         $role_id->save();
-        
+
         return $this->responseSuccess('Role successfully updated', $role_id);
     }
 
@@ -60,9 +61,9 @@ class RoleController extends Controller
         $role = Role::withTrashed()->find($id);
 
         if (!$role) {
-             return $this->responseNotFound('', 'Invalid ID provided for updating. Please check the ID and try again.');
+            return $this->responseUnprocessable('', 'Invalid id please check the id and try again.');
         }
-        
+
         if ($role->deleted_at) {
 
             $role->restore();
@@ -70,12 +71,15 @@ class RoleController extends Controller
             return $this->responseSuccess('Role successfully restore', $role);
         }
 
+        if (User::where('role_id', $id)->exists()) {
+            return $this->responseUnprocessable('', 'Unable to Archive, Role already in used!');
+        }
+
         if (!$role->deleted_at) {
 
             $role->delete();
 
             return $this->responseSuccess('Role successfully archive', $role);
-
-        } 
+        }
     }
 }

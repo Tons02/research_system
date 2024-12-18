@@ -15,14 +15,19 @@ use App\Http\Controllers\Api\UserController;
 
 Route::post('login', [AuthController::class, 'login']);
 
+
+Route::resource("companies", CompanyController::class);
+Route::resource("business-units", BusinessUnitController::class);
+Route::resource("departments", DepartmentController::class);
 Route::middleware(['auth:sanctum'])->group(function () {
+    
     // ymir coa 
-    Route::resource("companies", CompanyController::class)->middleware(['abilities:masterlist:sync']);
-    Route::resource("business-unit", BusinessUnitController::class)->middleware(['abilities:masterlist:sync']);
-    Route::resource("departments", DepartmentController::class)->middleware(['abilities:masterlist:sync']);
-    Route::resource("units", UnitController::class)->middleware(['abilities:masterlist:sync']);
-    Route::resource("sub-units", SubUnitController::class)->middleware(['abilities:masterlist:sync']);
-    Route::resource("locations", LocationController::class)->middleware(['abilities:masterlist:sync']);
+    // Route::resource("companies", CompanyController::class)->middleware(['abilities:masterlist:companies:sync']);  secured
+    // Route::resource("business-unit", BusinessUnitController::class)->middleware(['abilities:masterlist:business-units:sync']);
+    // Route::resource("departments", DepartmentController::class)->middleware(['abilities:masterlist:departments:sync']);
+    Route::resource("units", UnitController::class)->middleware(['abilities:masterlist:units:sync']);
+    Route::resource("sub-units", SubUnitController::class)->middleware(['abilities:masterlist:subunits:sync']);
+    Route::resource("locations", LocationController::class)->middleware(['abilities:masterlist:locations:sync']);
 
     //Role Controller
     Route::put('role-archived/{id}', [RoleController::class, 'archived'])->middleware(['abilities:role-management:crud']);
@@ -36,4 +41,5 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::patch('changepassword', [AuthController::class, 'changedPassword']);
     Route::post('logout', [AuthController::class, 'logout']);
     Route::patch('resetpassword/{id}', [AuthController::class, 'resetPassword']);
+
 });

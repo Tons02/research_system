@@ -22,13 +22,13 @@ class BusinessUnitRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'business_unit' => 'required|array',
-            'business_unit.*.sync_id' => 'required|integer|distinct', 
-            'business_unit.*.business_unit_code' => 'required|string|distinct',// i want this not to take effect on my table i want it to check on the payload  
-            'business_unit.*.business_unit_name' => 'required|string',
-            'business_unit.*.company_id' => 'required|exists:companies,sync_id',
-            'business_unit.*.updated_at' => 'required|date',
-            'business_unit.*.deleted_at' => 'nullable|date',
+            'business_units' => 'required|array',
+            'business_units.*.sync_id' => 'required|integer|distinct', 
+            'business_units.*.business_unit_code' => 'required|string|distinct',// i want this not to take effect on my table i want it to check on the payload  
+            'business_units.*.business_unit_name' => 'required|string',
+            'business_units.*.company_id' => 'required|exists:companies,sync_id',
+            'business_units.*.updated_at' => 'required|date',
+            'business_units.*.deleted_at' => 'nullable|date',
         ];
     }
 
@@ -36,8 +36,8 @@ class BusinessUnitRequest extends FormRequest
     public function messages()
     {
         return [
-            'business_unit.sync_id.unique' => 'The sync_id must be unique.',
-            'business_unit.business_unit_code.unique' => 'The business_unit_code must be unique.',
+            'business_units.sync_id.unique' => 'The sync_id must be unique.',
+            'business_units.business_unit_code.unique' => 'The business_unit_code must be unique.',
         ];
     }
 }

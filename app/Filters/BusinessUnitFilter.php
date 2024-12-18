@@ -11,4 +11,8 @@ class BusinessUnitFilter extends QueryFilters
         'business_unit_code',
         'business_unit_name'
     ];
+
+    protected array $relationSearch = [
+        'company' => ['company_name', 'company_code']
+    ];
 }

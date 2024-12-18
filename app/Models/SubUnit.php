@@ -27,7 +27,7 @@ class SubUnit extends Model
     
     public function unit()
     {
-        return $this->belongsTo(Companies::class, 'unit_id', 'sync_id');
+        return $this->belongsTo(Unit::class, 'unit_id', 'sync_id');
     }
 
     public function locations()

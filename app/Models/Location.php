@@ -27,8 +27,8 @@ class Location extends Model
         return $this->belongsToMany(
             SubUnit::class,
             "locations_sub_unit",
-            "sub_unit_id",
             "location_id",
+            "sub_unit_id",
             "sync_id",
             "sync_id"
         );

@@ -32,6 +32,7 @@ class RoleController extends Controller
             "name" => $request->name,
             "access_permission" => $request->access_permission,
         ]);
+        
 
         return $this->responseCreated('Role Successfully Created', $create_role);
     }

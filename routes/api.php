@@ -15,16 +15,12 @@ use App\Http\Controllers\Api\UserController;
 
 Route::post('login', [AuthController::class, 'login']);
 
-
-Route::resource("companies", CompanyController::class);
-Route::resource("business-units", BusinessUnitController::class);
-Route::resource("departments", DepartmentController::class);
 Route::middleware(['auth:sanctum'])->group(function () {
-    
-    // ymir coa 
-    // Route::resource("companies", CompanyController::class)->middleware(['abilities:masterlist:companies:sync']);  secured
-    // Route::resource("business-unit", BusinessUnitController::class)->middleware(['abilities:masterlist:business-units:sync']);
-    // Route::resource("departments", DepartmentController::class)->middleware(['abilities:masterlist:departments:sync']);
+
+    // ymir coa
+    Route::resource("companies", CompanyController::class)->middleware(['abilities:masterlist:companies:sync']);
+    Route::resource("business-units", BusinessUnitController::class)->middleware(['abilities:masterlist:business-units:sync']);
+    Route::resource("departments", DepartmentController::class)->middleware(['abilities:masterlist:departments:sync']);
     Route::resource("units", UnitController::class)->middleware(['abilities:masterlist:units:sync']);
     Route::resource("sub-units", SubUnitController::class)->middleware(['abilities:masterlist:subunits:sync']);
     Route::resource("locations", LocationController::class)->middleware(['abilities:masterlist:locations:sync']);
@@ -37,7 +33,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::put('user-archived/{id}', [UserController::class, 'archived'])->middleware(['abilities:user-management:crud']);
     Route::resource("user", UserController::class)->middleware(['abilities:user-management:crud']);
 
-    // auth controller 
+    // auth controller
     Route::patch('changepassword', [AuthController::class, 'changedPassword']);
     Route::post('logout', [AuthController::class, 'logout']);
     Route::patch('resetpassword/{id}', [AuthController::class, 'resetPassword']);

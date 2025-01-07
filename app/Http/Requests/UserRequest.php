@@ -29,7 +29,7 @@ class UserRequest extends FormRequest
                 "required",
                 "unique:users,id_no",
             ],
-            "personal_info.first_name" => "sometimes:required", 
+            "personal_info.first_name" => "sometimes:required",
             "personal_info.last_name" => "sometimes:required",
             "personal_info.mobile_number" => [
                 "unique:users,mobile_number," . $this->route()->user,
@@ -67,7 +67,7 @@ class UserRequest extends FormRequest
                     $query->where('sub_unit_id', $this->input('personal_info.sub_unit_id'));
                 }),
             ],
-            "username" => [ 
+            "username" => [
                 "required",
                 "unique:users,username," . $this->route()->user,
             ],

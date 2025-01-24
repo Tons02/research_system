@@ -11,4 +11,12 @@ class DepartmentFilter extends QueryFilters
         'department_code',
         'department_name'
     ];
+
+
+    public function business_unit_id($business_unit_id)
+    {
+        $this->builder->whereHas('business_unit', function ($query) use ($business_unit_id) {
+            $query->where('sync_id', $business_unit_id);
+        });
+    }
 }

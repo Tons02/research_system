@@ -27,6 +27,7 @@ class CompanyRequest extends FormRequest
             'companies.*.company_code' => 'required|string|distinct',// i want this not to take effect on my table i want it to check on the payload  
             'companies.*.company_name' => 'required|string',
             'companies.*.updated_at' => 'required|date',
+            'companies.*.deleted_at' => 'nullable|date',
         ];
     }
 

@@ -13,12 +13,55 @@ return new class extends Migration
     {
         Schema::create('users', function (Blueprint $table) {
             $table->id();
-            $table->string('name');
-            $table->string('email')->unique();
-            $table->timestamp('email_verified_at')->nullable();
+            $table->string('id_prefix');
+            $table->string('id_no');
+            $table->string('first_name');
+            $table->string('middle_name')->nullable();
+            $table->string('last_name');
+            $table->string('mobile_number')->nullable();
+            $table->enum("gender", ["male", "female"]);
+
+            $table->bigInteger('company_id');
+            $table->foreign("company_id")
+            ->references("sync_id")
+            ->on("companies");
+            
+            $table->bigInteger('business_unit_id');
+            $table->foreign("business_unit_id")
+            ->references("sync_id")
+            ->on("business_units");
+
+            $table->bigInteger('department_id');
+            $table->foreign("department_id")
+            ->references("sync_id")
+            ->on("departments");
+
+            $table->bigInteger('unit_id');
+            $table->foreign("unit_id")
+            ->references("sync_id")
+            ->on("units");
+
+            $table->bigInteger('sub_unit_id');
+            $table->foreign("sub_unit_id")
+            ->references("sync_id")
+            ->on("sub_units");
+
+            $table->bigInteger('location_id');
+            $table->foreign("location_id")
+            ->references("sync_id")
+            ->on("locations");
+
+            $table->string('username')->unique();
             $table->string('password');
+            $table->unsignedInteger("role_id")->index();
+
+            $table->foreign("role_id")
+            ->references("id")
+            ->on("roles");
+           
             $table->rememberToken();
             $table->timestamps();
+            $table->softDeletes();
         });
 
         Schema::create('password_reset_tokens', function (Blueprint $table) {

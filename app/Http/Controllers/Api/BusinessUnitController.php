@@ -23,7 +23,7 @@ class BusinessUnitController extends Controller
         ->orderBy('created_at', 'desc')
         ->useFilters()
         ->dynamicPaginate();
-        
+
         return $this->responseSuccess('Business units display successfully', $BusinessUnit );
     }
 

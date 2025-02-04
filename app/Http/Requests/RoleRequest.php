@@ -49,6 +49,7 @@ class RoleRequest extends FormRequest
                         "user-management:role-management:crud",
                         "form-management:crud",
                         "target-locations:crud"
+                        
                     ];
 
                     foreach ($value as $permission) {

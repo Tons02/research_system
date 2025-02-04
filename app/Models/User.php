@@ -75,33 +75,33 @@ class User extends Authenticatable
 
     public function company()
     {
-        return $this->belongsTo(Companies::class, 'company_id')->withTrashed();
+        return $this->belongsTo(Companies::class, 'company_id', 'sync_id')->withTrashed();
     }
 
     public function business_unit()
     {
-        return $this->belongsTo(BusinessUnit::class, 'business_unit_id')->withTrashed();
+        return $this->belongsTo(BusinessUnit::class, 'business_unit_id', 'sync_id')->withTrashed();
     }
 
     public function department()
     {
-        return $this->belongsTo(Department::class, 'department_id')->withTrashed();
+        return $this->belongsTo(Department::class, 'department_id', 'sync_id')->withTrashed();
     }
 
     public function unit()
     {
-        return $this->belongsTo(Unit::class, 'unit_id')->withTrashed();
+        return $this->belongsTo(Unit::class, 'unit_id', 'sync_id', 'sync_id')->withTrashed();
     }
 
     public function sub_unit()
     {
-        return $this->belongsTo(SubUnit::class, 'sub_unit_id')->withTrashed();
+        return $this->belongsTo(SubUnit::class, 'sub_unit_id', 'sync_id')->withTrashed();
     }
 
 
     public function location()
     {
-        return $this->belongsTo(Location::class, 'location_id')->withTrashed();
+        return $this->belongsTo(Location::class, 'location_id', 'sync_id')->withTrashed();
     }
 
 

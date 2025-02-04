@@ -11,4 +11,12 @@ class UnitFilter extends QueryFilters
         'unit_code',
         'unit_name'
     ];
+
+    public function sync_id($sync_id)
+    {
+        if ($sync_id !== null) {
+            $this->builder->where('sync_id', $sync_id);
+        }
+        return $this;
+    }
 }

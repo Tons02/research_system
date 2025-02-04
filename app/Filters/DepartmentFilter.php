@@ -19,4 +19,12 @@ class DepartmentFilter extends QueryFilters
             $query->where('sync_id', $business_unit_id);
         });
     }
+
+    public function sync_id($sync_id)
+    {
+        if ($sync_id !== null) {
+            $this->builder->where('sync_id', $sync_id);
+        }
+        return $this;
+    }
 }

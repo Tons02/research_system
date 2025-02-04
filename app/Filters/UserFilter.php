@@ -12,8 +12,8 @@ class UserFilter extends QueryFilters
         "first_name",
         "middle_name",
         "last_name",
-        "contact_details",
+        "mobile_number",
         "username",
-        "created_at", 
+        "created_at",
     ];
 }

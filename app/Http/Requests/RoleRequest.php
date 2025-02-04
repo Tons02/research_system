@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class RoleRequest extends FormRequest
 {
@@ -31,10 +32,35 @@ class RoleRequest extends FormRequest
             ],
             "access_permission" => [
                 "required",
-                "array", 
+                "array",
+                "distinct",
+                "min:1", // Ensure at least one permission is selected
+                function ($attribute, $value, $fail) {
+                    $allowedValues = [
+                        "masterlist",
+                        "masterlist:companies:sync",
+                        "masterlist:business-units:sync",
+                        "masterlist:departments:sync",
+                        "masterlist:units:sync",
+                        "masterlist:sub-units:sync",
+                        "masterlist:locations:sync",
+                        "user-management",
+                        "user-management:user-accounts:crud",
+                        "user-management:role-management:crud",
+                        "form-management:crud",
+                        "target-locations:crud"
+                    ];
+
+                    foreach ($value as $permission) {
+                        if (!in_array($permission, $allowedValues)) {
+                            $fail("The {$attribute} contains an invalid value: {$permission}.");
+                        }
+                    }
+                }
             ],
             "access_permission.*" => [
-                "distinct"
+                "distinct",
+                "required"
             ]
         ];
     }

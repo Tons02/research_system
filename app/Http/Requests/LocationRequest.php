@@ -6,7 +6,7 @@ use Illuminate\Foundation\Http\FormRequest;
 
 class LocationRequest extends FormRequest
 {
-   
+
     /**
      * Determine if the user is authorized to make this request.
      */
@@ -24,9 +24,10 @@ class LocationRequest extends FormRequest
     {
         return [
             'locations' => 'required|array',
-            'locations.*.sync_id' => 'required|integer|distinct', 
-            'locations.*.location_code' => 'required|string|distinct',// i want this not to take effect on my table i want it to check on the payload  
+            'locations.*.sync_id' => 'required|integer|distinct',
+            'locations.*.location_code' => 'required|string',
             'locations.*.location_name' => 'required|string',
+            // 'locations' => 'distinct:strict',
             'locations.*.sub_units' => 'required|array|exists:sub_units,sync_id',
             'locations.*.updated_at' => 'required|date',
             'locations.*.deleted_at' => 'nullable|date',

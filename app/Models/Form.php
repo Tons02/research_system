@@ -18,10 +18,6 @@ class Form extends Model
         'sections',
     ];
 
-    protected $hidden = [
-        "updated_at",
-    ];
-
     protected string $default_filters = FormFilter::class;
 
     protected $casts = [

@@ -23,9 +23,10 @@ class DepartmentRequest extends FormRequest
     {
         return [
             'departments' => 'required|array',
-            'departments.*.sync_id' => 'required|integer|distinct', 
-            'departments.*.department_code' => 'required|string|distinct',// i want this not to take effect on my table i want it to check on the payload  
+            'departments.*.sync_id' => 'required|integer|distinct',
+            'departments.*.department_code' => 'required|string',
             'departments.*.department_name' => 'required|string',
+            'departments' => 'distinct:strict',
             'departments.*.business_unit_id' => 'required|exists:business_units,sync_id',
             'departments.*.updated_at' => 'required|date',
             'departments.*.deleted_at' => 'nullable|date',

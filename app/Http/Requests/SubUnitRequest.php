@@ -23,15 +23,16 @@ class SubUnitRequest extends FormRequest
     {
         return [
             'sub_units' => 'required|array',
-            'sub_units.*.sync_id' => 'required|integer|distinct', 
-            'sub_units.*.sub_unit_code' => 'required|string|distinct',// i want this not to take effect on my table i want it to check on the payload  
+            'sub_units.*.sync_id' => 'required|integer|distinct',
+            'sub_units.*.sub_unit_code' => 'required|string',// i want this not to take effect on my table i want it to check on the payload
             'sub_units.*.sub_unit_name' => 'required|string',
+            'sub_units' => 'distinct:strict',
             'sub_units.*.unit_id' => 'required|exists:units,sync_id',
             'sub_units.*.updated_at' => 'required|date',
             'sub_units.*.deleted_at' => 'nullable|date',
         ];
     }
-
+ 
 
     public function messages()
     {

@@ -44,8 +44,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::resource("target-locations", TargetLocationController::class)->middleware(['abilities:target-locations:crud']);
 
     // auth controller
-    Route::patch('changepassword', [AuthController::class, 'changedPassword']);
+    Route::patch('changepassword', [AuthController::class, 'changedPassword'])->middleware(['abilities:user-management:user-accounts:crud']);
     Route::post('logout', [AuthController::class, 'logout']);
-    Route::patch('resetpassword/{id}', [AuthController::class, 'resetPassword']);
+    Route::patch('resetpassword/{id}', [AuthController::class, 'resetPassword'])->middleware(['abilities:user-management:user-accounts:crud']);
 
 });

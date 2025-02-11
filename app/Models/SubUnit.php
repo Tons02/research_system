@@ -12,7 +12,7 @@ use App\Models\Unit;
 class SubUnit extends Model
 {
     use softDeletes, Filterable;
-    
+
     protected $fillable = [
         'sync_id',
         'sub_unit_code',
@@ -24,7 +24,7 @@ class SubUnit extends Model
 
     protected string $default_filters = SubUnitFilter::class;
 
-    
+
     public function unit()
     {
         return $this->belongsTo(Unit::class, 'unit_id', 'sync_id');

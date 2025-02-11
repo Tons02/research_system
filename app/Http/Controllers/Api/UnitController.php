@@ -13,7 +13,7 @@ class UnitController extends Controller
     use ApiResponse;
     public function index(Request $request){
         $status = $request->query('status');
-        
+
         $units = Unit::
         with('department')
         ->when($status === "inactive", function ($query) {
@@ -29,11 +29,11 @@ class UnitController extends Controller
     public function store(UnitRequest $request){
 
         Unit::upsert(
-            $request->input('units'),               
-            ['sync_id'],             
-            ['unit_code', 'unit_name', 'department_id', 'updated_at', 'deleted_at'] 
+            $request->input('units'),
+            ['sync_id'],
+            ['unit_code', 'unit_name', 'department_id', 'updated_at', 'deleted_at']
         );
 
-        return $this->responseSuccess('Sync Units unit successfully');
+        return $this->responseSuccess('Sync Units successfully');
     }
 }

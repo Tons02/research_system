@@ -13,8 +13,12 @@ return new class extends Migration
     {
         Schema::create('locations_sub_unit', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('sub_unit_id')->constrained()->onDelete('cascade');
-            $table->foreignId('location_id')->constrained()->onDelete('cascade');
+            $table->unsignedBigInteger('sub_unit_id');
+            $table->unsignedBigInteger('location_id');
+
+            $table->foreign('sub_unit_id')->references('sync_id')->on('sub_units')->onDelete('cascade');
+            $table->foreign('location_id')->references('sync_id')->on('locations')->onDelete('cascade');
+
             $table->timestamps();
         });
     }

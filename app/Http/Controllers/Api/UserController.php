@@ -89,9 +89,9 @@ class UserController extends Controller
 
     public function archived(Request $request, $id)
     {
-        // if ($id == auth('sanctum')->user()->id) {
-        //     return $this->responseUnprocessable('', 'Unable to Archive, User already in used!');
-        // }
+        if ($id == auth('sanctum')->user()->id) {
+            return $this->responseUnprocessable('', 'Unable to Archive, User already in used!');
+        }
 
         $user = User::withTrashed()->find($id);
 

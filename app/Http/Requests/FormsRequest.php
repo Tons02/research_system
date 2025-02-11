@@ -28,8 +28,13 @@ class FormsRequest extends FormRequest
                     ? "unique:forms,title," . $this->route()->form
                     : "unique:forms,title",
             ],
+            "description" => [
+                "required",
+                "sometimes"
+            ],
             "sections" => [
                 "required",
+                "sometimes",
                 "array",
             ],
             "sections.*" => [

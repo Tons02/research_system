@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('locations', function (Blueprint $table) {
             $table->id();
-            $table->bigInteger('sync_id')->unique();
+            $table->unsignedBigInteger('sync_id')->unique();
             $table->string('location_code');
             $table->string('location_name');
             $table->timestamps();

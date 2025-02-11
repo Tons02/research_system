@@ -18,11 +18,23 @@ class FormController extends Controller
         $Form = Form::when($status === "inactive", function ($query) {
             $query->onlyTrashed();
         })
-            ->orderBy('created_at', 'desc')
             ->useFilters()
             ->dynamicPaginate();
 
         return $this->responseSuccess('Form display successfully', $Form);
+    }
+
+    public function show(Request $request, $id)
+    {
+        $status = $request->query('status');
+
+        $Form = Form::where('id', $id)->get();
+
+        if($Form->isEmpty()){
+            return $this->responseUnprocessable('', 'Invalid ID');
+        }
+
+        return $this->responseSuccess('Single form display successfully', $Form);
     }
 
     public function store(FormsRequest $request)
@@ -47,7 +59,7 @@ class FormController extends Controller
 
         $form_id->title = $request['title'];
         $form_id->description = $request['description'];
-        $form_id->sections = $request['sections'];
+        $form_id->sections = ($request->has('sections') && $request['sections'] !== null) ? $request['sections'] : $form_id->sections;
 
         if (!$form_id->isDirty()) {
             return $this->responseSuccess('No Changes', $form_id);

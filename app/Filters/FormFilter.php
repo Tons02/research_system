@@ -10,4 +10,6 @@ class FormFilter extends QueryFilters
         "title",
         "description",
     ];
+
+    protected array $allowedSorts = ['created_at', 'updated_at', 'title'];
 }

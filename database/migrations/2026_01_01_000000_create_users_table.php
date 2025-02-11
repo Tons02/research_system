@@ -25,7 +25,7 @@ return new class extends Migration
             $table->foreign("company_id")
             ->references("sync_id")
             ->on("companies");
-            
+
             $table->bigInteger('business_unit_id');
             $table->foreign("business_unit_id")
             ->references("sync_id")
@@ -41,12 +41,12 @@ return new class extends Migration
             ->references("sync_id")
             ->on("units");
 
-            $table->bigInteger('sub_unit_id');
+            $table->unsignedBigInteger('sub_unit_id');
             $table->foreign("sub_unit_id")
             ->references("sync_id")
             ->on("sub_units");
 
-            $table->bigInteger('location_id');
+            $table->unsignedBigInteger('location_id');
             $table->foreign("location_id")
             ->references("sync_id")
             ->on("locations");
@@ -58,7 +58,7 @@ return new class extends Migration
             $table->foreign("role_id")
             ->references("id")
             ->on("roles");
-           
+
             $table->rememberToken();
             $table->timestamps();
             $table->softDeletes();

@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('sub_units', function (Blueprint $table) {
             $table->id();
-            $table->bigInteger('sync_id')->unique();
+            $table->unsignedBigInteger('sync_id')->unique();
             $table->string('sub_unit_code');
             $table->string('sub_unit_name');
             $table->bigInteger('unit_id')->index();

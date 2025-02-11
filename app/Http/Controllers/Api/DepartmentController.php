@@ -13,7 +13,7 @@ class DepartmentController extends Controller
     use ApiResponse;
     public function index(Request $request){
         $status = $request->query('status');
-        
+
         $departments = Department::
         with('business_unit')
         ->when($status === "inactive", function ($query) {
@@ -29,11 +29,11 @@ class DepartmentController extends Controller
     public function store(DepartmentRequest $request){
 
         Department::upsert(
-            $request->input('departments'),               
-            ['sync_id'],             
-            ['department_code', 'department_name', 'business_unit_id', 'updated_at', 'deleted_at'] 
+            $request->input('departments'),
+            ['sync_id'],
+            ['department_code', 'department_name', 'business_unit_id', 'updated_at', 'deleted_at']
         );
 
-        return $this->responseSuccess('Sync Department unit successfully');
+        return $this->responseSuccess('Sync Department successfully');
     }
 }

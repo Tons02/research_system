@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\softDeletes;
 class Location extends Model
 {
     use softDeletes, Filterable;
-    
+
     protected $fillable = [
         'sync_id',
         'location_code',

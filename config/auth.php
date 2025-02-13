@@ -43,6 +43,10 @@ return [
         'api' => [
             'driver' => 'sanctum',
             'provider' => 'users',
+        ],
+        'cookie' => [ // Define the 'cookie' guard
+            'driver' => 'session',
+            'provider' => 'users',
         ]
     ],
 

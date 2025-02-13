@@ -8,6 +8,7 @@ use App\Http\Requests\ForgetPasswordRequest;
 use App\Models\User;
 use Essa\APIToolKit\Api\ApiResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Facades\Hash;
 
 class AuthController extends Controller
@@ -41,6 +42,7 @@ class AuthController extends Controller
 
     public function Logout(Request $request)
     {
+        $cookie = Cookie::forget('authcookie');
         auth('sanctum')->user()->currentAccessToken()->delete();
         return $this->responseSuccess('Logout successfully');
     }

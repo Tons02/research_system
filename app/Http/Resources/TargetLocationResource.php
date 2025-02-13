@@ -14,6 +14,18 @@ class TargetLocationResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
-        return parent::toArray($request);
+        return [
+            'id' => $this->id,
+            'target_location' => $this->target_location,
+            'form_id' => $this->form_id,
+            'form' => [
+                $this->form->id,
+                $this->form->description,
+                $this->form->sections,
+            ],
+            'created_at' => $this->created_at,
+            'updated_at' => $this->updated_at,
+            'deleted_at' => $this->deleted_at
+        ];
     }
 }

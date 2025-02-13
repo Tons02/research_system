@@ -17,8 +17,7 @@ class TargetLocationController extends Controller
         $status = $request->query('status');
         $pagination = $request->query('pagination');
 
-        $TargetLocation = TargetLocation::with(['form'])
-            ->when($status === "inactive", function ($query) {
+        $TargetLocation = TargetLocation::when($status === "inactive", function ($query) {
                 $query->onlyTrashed();
             })
             ->orderBy('created_at', 'desc')

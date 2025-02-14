@@ -22,7 +22,7 @@ return new class extends Migration
             $table->string('date');
             $table->json('questionnaire_answer');
             $table->unsignedInteger("surveyor_id")->index();
-            $table->date("submit_date");
+            $table->timestamp("submit_date");
 
 
             // relationship on target location

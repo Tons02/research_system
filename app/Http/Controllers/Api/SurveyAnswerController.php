@@ -19,8 +19,8 @@ class SurveyAnswerController extends Controller
         $status = $request->query('status');
         $pagination = $request->query('pagination');
 
-        $SurveyAnswer = SurveyAnswer::with(['form'])
-            ->when($status === "inactive", function ($query) {
+        $SurveyAnswer = SurveyAnswer::
+            when($status === "inactive", function ($query) {
                 $query->onlyTrashed();
             })
             ->orderBy('created_at', 'desc')
@@ -96,8 +96,7 @@ class SurveyAnswerController extends Controller
                 }
             }
         }
-
-        return $this->responseCreated('Form Successfully Created', $create_survey_answer);
+        return $this->responseCreated('Survey Answer Successfully Sync', $create_survey_answer);
     }
 
 }

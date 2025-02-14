@@ -2,12 +2,14 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Exports\UsersExport;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Http\Requests\UserRequest;
 use App\Http\Resources\UserResource;
 use Essa\APIToolKit\Api\ApiResponse;
 use App\Models\User;
+use Maatwebsite\Excel\Facades\Excel;
 
 class UserController extends Controller
 {
@@ -110,5 +112,12 @@ class UserController extends Controller
             $user->delete();
             return $this->responseSuccess('user successfully archive', $user);
         }
+    }
+
+    public function export(Request $request)
+    {
+        $status = $request->query('status', null);
+        $title = $status == "inactive" ? 'inactive-users.xlsx' : 'users.xlsx';
+        return Excel::download(new UsersExport($status), $title);
     }
 }

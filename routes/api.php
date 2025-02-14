@@ -62,6 +62,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     // User Controller
     Route::put('user-archived/{id}', [UserController::class, 'archived'])->middleware(['abilities:user-management:user-accounts:crud']);
+    Route::get('users-export', [UserController::class, 'export'])->middleware(['abilities:user-management:user-accounts:crud']);
     Route::resource("user", UserController::class)->middleware(['abilities:user-management:user-accounts:crud']);
 
     //Form Controller

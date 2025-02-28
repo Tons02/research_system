@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\LocationController;
 use App\Http\Controllers\Api\RoleController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\FormController;
+use App\Http\Controllers\Api\QuestionAnswerController;
 use App\Http\Controllers\Api\SurveyAnswerController;
 use App\Http\Controllers\Api\TargetLocationController;
 
@@ -82,6 +83,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::put('survey-answer-archived/{id}', [SurveyAnswerController::class, 'archived'])->middleware(['abilities:survey-answer:crud']);
     Route::resource("survey-answers", SurveyAnswerController::class)->middleware(['abilities:survey-answer:crud']);
 
-
+    //Question Answers Controller
+    Route::resource("question-answers", QuestionAnswerController::class)->middleware(['abilities:survey-answer:crud']);
 
 });

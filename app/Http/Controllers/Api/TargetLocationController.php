@@ -8,6 +8,7 @@ use App\Http\Resources\TargetLocationResource;
 use Essa\APIToolKit\Api\ApiResponse;
 use App\Models\TargetLocation;
 use App\Http\Requests\TargetLocationRequest;
+use App\Models\SurveyAnswer;
 
 class TargetLocationController extends Controller
 {
@@ -75,6 +76,11 @@ class TargetLocationController extends Controller
             $target_location->restore();
 
             return $this->responseSuccess('Target Location successfully restore', $target_location);
+        }
+
+         // need to put this one once the survey answer is already created
+         if (SurveyAnswer::where('target_location_id', $id)->exists()) {
+            return $this->responseUnprocessable('', 'Unable to Archive, Target location already in used!');
         }
 
         if (!$target_location->deleted_at) {

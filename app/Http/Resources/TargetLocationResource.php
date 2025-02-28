@@ -19,9 +19,8 @@ class TargetLocationResource extends JsonResource
             'target_location' => $this->target_location,
             'form_id' => $this->form_id,
             'form' => [
-                $this->form->id,
-                $this->form->description,
-                $this->form->sections,
+                'id' => $this->form->id,
+                'title' => $this->form->title,
             ],
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,

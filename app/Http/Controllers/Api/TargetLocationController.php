@@ -9,6 +9,7 @@ use Essa\APIToolKit\Api\ApiResponse;
 use App\Models\TargetLocation;
 use App\Http\Requests\TargetLocationRequest;
 use App\Models\SurveyAnswer;
+use Illuminate\Support\Facades\Cache;
 
 class TargetLocationController extends Controller
 {
@@ -16,20 +17,24 @@ class TargetLocationController extends Controller
     public function index(Request $request)
     {
         $status = $request->query('status');
-        $pagination = $request->query('pagination');
 
-        $TargetLocation = TargetLocation::when($status === "inactive", function ($query) {
-                $query->onlyTrashed();
-            })
-            ->orderBy('created_at', 'desc')
-            ->useFilters()
-            ->dynamicPaginate();
+        // Generate a unique cache key based on status
+        $cacheKey = "target_location_api_" . ($status ?? 'active');
 
-        if (!$pagination) {
-            TargetLocationResource::collection($TargetLocation);
-        } else {
-            $TargetLocation = TargetLocationResource::collection($TargetLocation);
-        }
+        // Try to get data from cache, otherwise store it in Redis
+        $TargetLocation = Cache::remember($cacheKey, 600, function () use ($status) {
+            return TargetLocation::with('form')
+                ->when($status === "inactive", function ($query) {
+                    $query->onlyTrashed();
+                })
+                ->orderBy('created_at', 'desc')
+                ->useFilters()
+                ->dynamicPaginate();
+        });
+
+        // Transform data with resource
+        $TargetLocation = TargetLocationResource::collection($TargetLocation);
+
         return $this->responseSuccess('Target Location display successfully', $TargetLocation);
     }
 
@@ -39,6 +44,9 @@ class TargetLocationController extends Controller
             "target_location" => $request["target_location"],
             "form_id" => $request["form_id"],
         ]);
+
+        // Clear relevant caches
+        $this->clearTargetLocationCache();
 
         return $this->responseCreated('Form Successfully Created', $create_target_location);
     }
@@ -60,7 +68,10 @@ class TargetLocationController extends Controller
 
         $target_location_id->save();
 
-        return $this->responseSuccess('Role successfully updated', $target_location_id);
+        // Clear relevant caches
+        $this->clearTargetLocationCache();
+
+        return $this->responseSuccess('Target Location successfully updated', $target_location_id);
     }
 
     public function archived(Request $request, $id)
@@ -75,11 +86,15 @@ class TargetLocationController extends Controller
 
             $target_location->restore();
 
+            // Clear relevant caches
+            $this->clearTargetLocationCache();
+
             return $this->responseSuccess('Target Location successfully restore', $target_location);
         }
 
          // need to put this one once the survey answer is already created
          if (SurveyAnswer::where('target_location_id', $id)->exists()) {
+
             return $this->responseUnprocessable('', 'Unable to Archive, Target location already in used!');
         }
 
@@ -87,9 +102,19 @@ class TargetLocationController extends Controller
 
             $target_location->delete();
 
+            // Clear relevant caches
+            $this->clearTargetLocationCache();
+
             return $this->responseSuccess('Target Location successfully archive', $target_location);
         }
     }
+
+    private function clearTargetLocationCache()
+    {
+        Cache::forget("target_location_api_active");
+        Cache::forget("target_location_api_inactive");
+    }
+
 
 
 }

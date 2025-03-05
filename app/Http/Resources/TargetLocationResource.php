@@ -18,10 +18,12 @@ class TargetLocationResource extends JsonResource
             'id' => $this->id,
             'target_location' => $this->target_location,
             'form_id' => $this->form_id,
-            'form' => [
-                'id' => $this->form->id,
-                'title' => $this->form->title,
-            ],
+            'form' => $this->whenLoaded('form', function () {
+                return [
+                    'id' => $this->form->id,
+                    'title' => $this->form->title,
+                ];
+            }), 
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
             'deleted_at' => $this->deleted_at

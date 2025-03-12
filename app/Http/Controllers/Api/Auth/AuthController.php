@@ -77,6 +77,6 @@ class AuthController extends Controller
             'password' => Hash::make($request->new_password),
         ]);
 
-        return $this->responseSuccess('Password change successfully');
+        return $this->responseSuccess('Password change successfully'); 
     }
 }

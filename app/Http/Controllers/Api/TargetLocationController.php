@@ -10,6 +10,7 @@ use App\Models\TargetLocation;
 use App\Http\Requests\TargetLocationRequest;
 use App\Models\SurveyAnswer;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Http;
 
 class TargetLocationController extends Controller
 {
@@ -40,8 +41,27 @@ class TargetLocationController extends Controller
 
     public function store(TargetLocationRequest $request)
     {
+
         $create_target_location = TargetLocation::create([
-            "target_location" => $request["target_location"],
+            "region_psgc_id" => $request["region_psgc_id"],
+            "region" => $request["region"],
+            "province_psgc_id" => $request["province_psgc_id"],
+            "province" => $request["province"],
+            "city_municipality_psgc_id" => $request["city_municipality_psgc_id"],
+            "city_municipality" => $request["city_municipality"],
+            "sub_municipality_psgc_id" => $request["sub_municipality_psgc_id"],
+            "sub_municipality" => $request["sub_municipality"],
+            "barangay_psgc_id" => $request["barangay_psgc_id"],
+            "barangay" => $request["barangay"],
+            "street" => $request["street"],
+            "bound_box" => $this->getBoundBox(implode(', ', array_filter([
+                $request["barangay"],
+                $request["city_municipality"],
+                $request["province"],
+                $request["region"],
+                'Philippines'
+            ])) ?? null),
+            "response_limit" => $request["response_limit"],
             "form_id" => $request["form_id"],
         ]);
 
@@ -59,8 +79,26 @@ class TargetLocationController extends Controller
             return $this->responseUnprocessable('', 'Invalid ID provided for updating. Please check the ID and try again.');
         }
 
-        $target_location_id->target_location = $request['target_location'];
+        $target_location_id->region_psgc_id = $request['region_psgc_id'];
+        $target_location_id->region = $request['region'];
+        $target_location_id->province_psgc_id = $request['province_psgc_id'];
+        $target_location_id->province = $request['province'];
+        $target_location_id->city_municipality_psgc_id = $request['city_municipality_psgc_id'];
+        $target_location_id->city_municipality = $request['city_municipality'];
+        $target_location_id->sub_municipality_psgc_id = $request['sub_municipality_psgc_id'];
+        $target_location_id->sub_municipality = $request['sub_municipality'];
+        $target_location_id->barangay_psgc_id = $request['barangay_psgc_id'];
+        $target_location_id->barangay = $request['barangay'];
+        $target_location_id->street = $request['street'];
+        $target_location_id->response_limit = $request['response_limit'];
         $target_location_id->form_id = $request['form_id'];
+        $target_location_id->bound_box = $this->getBoundBox(implode(', ', array_filter([
+                $request["barangay"],
+                $request["city_municipality"],
+                $request["province"],
+                $request["region"],
+                'Philippines'
+        ])) ?? null);
 
         if (!$target_location_id->isDirty()) {
             return $this->responseSuccess('No Changes', $target_location_id);
@@ -113,6 +151,23 @@ class TargetLocationController extends Controller
     {
         Cache::forget("target_location_api_active");
         Cache::forget("target_location_api_inactive");
+    }
+
+    protected function getBoundBox($location)
+    {
+        $response = Http::withHeaders([
+            'User-Agent' => 'YourAppName/1.0 (your@email.com)' // Replace with your app info
+        ])->get("https://nominatim.openstreetmap.org/search", [
+            'q' => $location,
+            'format' => 'json',
+            'polygon_geojson' => 1,
+        ]);
+
+        if ($response->successful() && !empty($response[0])) {
+            return $response[0]['boundingbox']; // Example format: [lat_min, lat_max, lon_min, lon_max]
+        }
+
+        return $response ?? null; // Fallback if no data found
     }
 
 

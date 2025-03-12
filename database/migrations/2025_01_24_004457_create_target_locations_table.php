@@ -13,7 +13,16 @@ return new class extends Migration
     {
         Schema::create('target_locations', function (Blueprint $table) {
             $table->increments('id');
-            $table->string('target_location');
+            $table->string('region_psgc_id');
+            $table->string('region');
+            $table->string('province_psgc_id');
+            $table->string('province');
+            $table->string('city_municipality_psgc_id');
+            $table->string('city_municipality');
+            $table->string('sub_municipality_psgc_id');
+            $table->string('sub_municipality');
+            $table->string('barangay_psgc_id');
+            $table->string('barangay');
             $table->unsignedInteger("form_id")->index();
 
             $table->foreign("form_id")

@@ -37,12 +37,12 @@ class TargetLocationResource extends JsonResource
             'bound_box' => $this->bound_box,
             'response_limit' => $this->response_limit,
             'form_id' => $this->form_id,
-            'form' => $this->whenLoaded('form', function () {
-                return [
+            'form' => [
                     'id' => $this->form->id,
                     'title' => $this->form->title,
-                ];
-            }),
+                    'description' => $this->form->description,
+                    'sections' => $this->form->sections,
+                    ],
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
             'deleted_at' => $this->deleted_at

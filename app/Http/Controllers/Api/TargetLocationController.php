@@ -18,23 +18,21 @@ class TargetLocationController extends Controller
     public function index(Request $request)
     {
         $status = $request->query('status');
+        $pagination = $request->query('pagination');
 
-        // Generate a unique cache key based on status
-        $cacheKey = "target_location_api_" . ($status ?? 'active');
 
-        // Try to get data from cache, otherwise store it in Redis
-        $TargetLocation = Cache::remember($cacheKey, 600, function () use ($status) {
-            return TargetLocation::with('form')
-                ->when($status === "inactive", function ($query) {
-                    $query->onlyTrashed();
-                })
-                ->orderBy('created_at', 'desc')
-                ->useFilters()
-                ->dynamicPaginate();
-        });
+        $TargetLocation = TargetLocation::when($status === "inactive", function ($query) {
+            $query->onlyTrashed();
+        })
+        ->orderBy('created_at', 'desc')
+        ->useFilters()
+        ->dynamicPaginate();
 
-        // Transform data with resource
-        $TargetLocation = TargetLocationResource::collection($TargetLocation);
+        if (!$pagination) {
+            TargetLocationResource::collection($TargetLocation);
+        } else {
+           $TargetLocation = TargetLocationResource::collection($TargetLocation);
+        }
 
         return $this->responseSuccess('Target Location display successfully', $TargetLocation);
     }
@@ -60,13 +58,11 @@ class TargetLocationController extends Controller
                 $request["province"],
                 $request["region"],
                 'Philippines'
-            ])) ?? null),
+            ]))) ?? [],
             "response_limit" => $request["response_limit"],
             "form_id" => $request["form_id"],
         ]);
 
-        // Clear relevant caches
-        $this->clearTargetLocationCache();
 
         return $this->responseCreated('Form Successfully Created', $create_target_location);
     }
@@ -93,21 +89,18 @@ class TargetLocationController extends Controller
         $target_location_id->response_limit = $request['response_limit'];
         $target_location_id->form_id = $request['form_id'];
         $target_location_id->bound_box = $this->getBoundBox(implode(', ', array_filter([
-                $request["barangay"],
-                $request["city_municipality"],
-                $request["province"],
-                $request["region"],
-                'Philippines'
-        ])) ?? null);
+            $request["barangay"],
+            $request["city_municipality"],
+            $request["province"],
+            $request["region"],
+            'Philippines'
+        ]))) ?? [];
 
         if (!$target_location_id->isDirty()) {
             return $this->responseSuccess('No Changes', $target_location_id);
         }
 
         $target_location_id->save();
-
-        // Clear relevant caches
-        $this->clearTargetLocationCache();
 
         return $this->responseSuccess('Target Location successfully updated', $target_location_id);
     }
@@ -124,9 +117,6 @@ class TargetLocationController extends Controller
 
             $target_location->restore();
 
-            // Clear relevant caches
-            $this->clearTargetLocationCache();
-
             return $this->responseSuccess('Target Location successfully restore', $target_location);
         }
 
@@ -140,34 +130,26 @@ class TargetLocationController extends Controller
 
             $target_location->delete();
 
-            // Clear relevant caches
-            $this->clearTargetLocationCache();
-
             return $this->responseSuccess('Target Location successfully archive', $target_location);
         }
-    }
-
-    private function clearTargetLocationCache()
-    {
-        Cache::forget("target_location_api_active");
-        Cache::forget("target_location_api_inactive");
     }
 
     protected function getBoundBox($location)
     {
         $response = Http::withHeaders([
-            'User-Agent' => 'YourAppName/1.0 (your@email.com)' // Replace with your app info
+            'User-Agent' => 'Research System' // Replace with your app info
         ])->get("https://nominatim.openstreetmap.org/search", [
             'q' => $location,
             'format' => 'json',
             'polygon_geojson' => 1,
         ]);
 
-        if ($response->successful() && !empty($response[0])) {
-            return $response[0]['boundingbox']; // Example format: [lat_min, lat_max, lon_min, lon_max]
+        if ($response->successful() && !empty($response->json())) {
+            $data = $response->json();
+            return !empty($data[0]['boundingbox']) ? $data[0]['boundingbox'] : null;
         }
 
-        return $response ?? null; // Fallback if no data found
+        return null; // Return null instead of the full response
     }
 
 

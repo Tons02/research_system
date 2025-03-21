@@ -28,17 +28,17 @@ class TargetLocationRequest extends FormRequest
             "city_municipality_psgc_id" => ["required"],
             "city_municipality" => ["required"],
             "barangay" => ["required"],
-            // "street" => ["required"],
+            "street" => ["required"],
 
-            // "barangay_psgc_id" => [
-            //     "required",
-            //     $this->route()->target_location
-            //         ? "unique:target_locations,barangay_psgc_id," . $this->route()->target_location
-            //         : "unique:target_locations,barangay_psgc_id",
-            // ],
+            "barangay_psgc_id" => [
+                "required",
+                $this->route()->target_location
+                    ? "unique:target_locations,barangay_psgc_id," . $this->route()->target_location
+                    : "unique:target_locations,barangay_psgc_id",
+            ],
 
             "form_id" => ["required","exists:forms,id"],
-            "response_limit" => ["required"],
+            "response_limit" => ["required", "integer", "min:1"]
         ];
     }
 

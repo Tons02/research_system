@@ -19,8 +19,7 @@ class UserController extends Controller
         $status = $request->query('status');
         $pagination = $request->query('pagination');
 
-        $User = User::with(['company'])
-            ->when($status === "inactive", function ($query) {
+        $User = User::when($status === "inactive", function ($query) {
                 $query->onlyTrashed();
             })
             ->orderBy('created_at', 'desc')

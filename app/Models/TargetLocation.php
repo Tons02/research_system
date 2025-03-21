@@ -38,6 +38,11 @@ class TargetLocation extends Model
 
     protected $casts = [
         'bound_box' => 'json',
+        'region_psgc_id' => 'string',
+        'province_psgc_id' => 'string',
+        'city_municipality_psgc_id' => 'string',
+        'sub_municipality_psgc_id' => 'string',
+        'barangay_psgc_id' => 'string',
     ];
 
 }

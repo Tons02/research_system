@@ -46,14 +46,11 @@ class RoleController extends Controller
             return $this->responseUnprocessable('', 'Invalid ID provided for updating. Please check the ID and try again.');
         }
 
-        // Store previous name before updating
         $previousName = $role->name;
 
-        // Update Role details
         $role->name = $request['name'];
         $role->access_permission = $request['access_permission'];
 
-        // Check if changes were made
         if (!$role->isDirty()) {
             return $this->responseSuccess('No Changes', $role);
         }

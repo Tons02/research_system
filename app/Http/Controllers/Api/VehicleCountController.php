@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Exports\TrafficCounts\TrafficCountExport;
 use App\Exports\VehicleCountExport;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\VehicleCountExportRequest;
 use App\Http\Requests\VehicleCountRequest;
 use App\Models\VehicleCount;
 use Carbon\Carbon;
@@ -91,7 +92,7 @@ class VehicleCountController extends Controller
         }
     }
 
-    public function export(Request $request)
+    public function export(VehicleCountExportRequest $request)
     {
         $target_locations = $request->query('target_locations', null);
 

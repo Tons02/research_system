@@ -15,7 +15,7 @@ use App\Http\Controllers\Api\FormController;
 use App\Http\Controllers\Api\QuestionAnswerController;
 use App\Http\Controllers\Api\SurveyAnswerController;
 use App\Http\Controllers\Api\TargetLocationController;
-
+use App\Http\Controllers\Api\VehicleCountController;
 
 Route::post('login', [AuthController::class, 'login']);
 // // ymir coa
@@ -85,5 +85,11 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     //Question Answers Controller
     Route::resource("question-answers", QuestionAnswerController::class)->middleware(['abilities:survey-answer:crud']);
+
+    //Vehicle Count Controller
+    Route::put('vehicle-count-archived/{id}', [VehicleCountController::class, 'archived'])->middleware(['abilities:survey-answer:crud']);
+    Route::get('vehicle-count-export', [VehicleCountController::class, 'export'])->middleware(['abilities:survey-answer:crud']);
+    Route::resource("vehicle-counts", VehicleCountController::class)->middleware(['abilities:survey-answer:crud']);
+
 
 });

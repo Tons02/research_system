@@ -45,9 +45,15 @@ class SurveyAnswerController extends Controller
             "address" => $request["address"],
             "contact_number" => $request["contact_number"],
             "date" =>  $request["date"],
+            "income_class" =>  $request["income_class"],
+            "monthly_utility_expenses" =>  $request["monthly_utility_expenses"],
+            "educational_attainment" =>  $request["educational_attainment"],
+            "employment_status" =>  $request["employment_status"],
+            "occupation" =>  $request["occupation"],
+            "structure_of_house" =>  $request["structure_of_house"],
+            "ownership_of_house" =>  $request["ownership_of_house"],
             "questionnaire_answer" => $request["questionnaire_answer"],
-            "surveyor_id" => $request["surveyor_id"],
-            "submit_date" => date('Y-m-d H:i:s')
+            "surveyor_id" => auth('sanctum')->user()->id,
         ]);
 
         $questionnaire_answers = $request->input('questionnaire_answer');

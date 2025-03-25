@@ -15,19 +15,24 @@ return new class extends Migration
             $table->increments('id');
             $table->string('region_psgc_id');
             $table->string('region');
-            $table->string('province_psgc_id');
-            $table->string('province');
+            $table->string('province_psgc_id')->nullable();
+            $table->string('province')->nullable();
             $table->string('city_municipality_psgc_id');
             $table->string('city_municipality');
-            $table->string('sub_municipality_psgc_id');
-            $table->string('sub_municipality');
+            $table->string('sub_municipality_psgc_id')->nullable();
+            $table->string('sub_municipality')->nullable();
             $table->string('barangay_psgc_id');
             $table->string('barangay');
+            $table->string('street')->nullable();
+            $table->json('bound_box')->nullable();
+
+            $table->integer('response_limit');
             $table->unsignedInteger("form_id")->index();
 
             $table->foreign("form_id")
-            ->references("id")
-            ->on("forms");
+                ->references("id")
+                ->on("forms")
+                ->onDelete("cascade");
 
             $table->timestamps();
             $table->softDeletes();

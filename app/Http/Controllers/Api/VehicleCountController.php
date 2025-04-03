@@ -17,16 +17,24 @@ use Maatwebsite\Excel\Facades\Excel;
 class VehicleCountController extends Controller
 {
     use ApiResponse;
+
     public function index(Request $request)
     {
         $status = $request->query('status');
+        $target_location_id = $request->query('target_location_id');
 
-        $VehicleCount = VehicleCount::with('target_locations')->when($status === "inactive", function ($query) {
+        $VehicleCount = VehicleCount::with('target_locations')
+        ->when($status === "inactive", function ($query) {
             $query->onlyTrashed();
         })
-            ->orderBy('created_at', 'desc')
-            ->useFilters()
-            ->dynamicPaginate();
+        ->when(!is_null($target_location_id), function ($query) use ($target_location_id) {
+            $query->whereHas('target_locations', function ($query) use ($target_location_id) {
+                $query->where('target_location_id', $target_location_id);
+            });
+        })
+        ->orderBy('created_at', 'desc')
+        ->useFilters()
+        ->dynamicPaginate();
 
         return $this->responseSuccess('Vehicle Count display successfully', $VehicleCount);
     }
@@ -42,8 +50,8 @@ class VehicleCountController extends Controller
             "grand_total" => $request->total_left +  $request->total_right,
         ]);
 
-        if ($request->target_locations) {
-            $create_vehicle_count->target_locations()->attach($request->target_locations);
+        if ($request->target_location_id) {
+            $create_vehicle_count->target_locations()->attach($request->target_location_id);
         }
 
 
@@ -94,7 +102,7 @@ class VehicleCountController extends Controller
 
     public function export(VehicleCountExportRequest $request)
     {
-        $target_locations = $request->query('target_locations', null);
+        $target_locations = $request->query('target_locations');
 
         return Excel::download(new TrafficCountExport($target_locations), 'Vehicle Counts.xlsx');
     }

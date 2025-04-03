@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\CompanyController;
 use App\Http\Controllers\Api\BusinessUnitController;
 use App\Http\Controllers\Api\DepartmentController;
+use App\Http\Controllers\Api\FootCountController;
 use App\Http\Controllers\Api\UnitController;
 use App\Http\Controllers\Api\SubUnitController;
 use App\Http\Controllers\Api\LocationController;
@@ -91,5 +92,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('vehicle-count-export', [VehicleCountController::class, 'export'])->middleware(['abilities:survey-answer:crud']);
     Route::resource("vehicle-counts", VehicleCountController::class)->middleware(['abilities:survey-answer:crud']);
 
+    //Foot Count Controller
+    Route::put('foot-count-archived/{id}', [FootCountController::class, 'archived'])->middleware(['abilities:survey-answer:crud']);
+    Route::get('foot-count-export', [FootCountController::class, 'export'])->middleware(['abilities:survey-answer:crud']);
+    Route::resource("foot-counts", FootCountController::class)->middleware(['abilities:survey-answer:crud']);
 
 });

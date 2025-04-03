@@ -39,7 +39,6 @@ class TargetLocationController extends Controller
 
     public function store(TargetLocationRequest $request)
     {
-
         $create_target_location = TargetLocation::create([
             "region_psgc_id" => $request["region_psgc_id"],
             "region" => $request["region"],

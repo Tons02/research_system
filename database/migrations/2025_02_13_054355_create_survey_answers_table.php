@@ -20,8 +20,11 @@ return new class extends Migration
             $table->text('address');
             $table->string('contact_number');
             $table->string('date');
+            $table->integer('family_size');
             $table->string('income_class');
+            $table->string('sub_income_class');
             $table->string('monthly_utility_expenses');
+            $table->string('sub_monthly_utility_expenses');
             $table->string('educational_attainment');
             $table->string('employment_status');
             $table->string('occupation');
@@ -29,7 +32,6 @@ return new class extends Migration
             $table->string('ownership_of_house');
             $table->json('questionnaire_answer');
             $table->unsignedInteger("surveyor_id")->index();
-            $table->timestamp("submit_date");
 
 
             // relationship on target location

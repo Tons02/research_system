@@ -19,9 +19,18 @@ class SurveyAnswer extends Model
         'address',
         'contact_number',
         'date',
+        'family_size',
+        'income_class',
+        'sub_income_class',
+        'monthly_utility_expenses',
+        'sub_monthly_utility_expenses',
+        'educational_attainment',
+        'employment_status',
+        'occupation',
+        'structure_of_house',
+        'ownership_of_house',
         'questionnaire_answer',
-        'surveyor_id',
-        'submit_date',
+        'surveyor_id'
     ];
 
     public function user()

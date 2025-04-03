@@ -2,7 +2,10 @@
 
 namespace App\Http\Requests;
 
+use Carbon\Carbon;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 
 class VehicleCountRequest extends FormRequest
@@ -23,34 +26,50 @@ class VehicleCountRequest extends FormRequest
     public function rules(): array
     {
         return [
-           "date" => [
-                    "required",
-                    "sometimes",
-                    "date",
-                    "before_or_equal:" . now()->toDateString(),
-                    function ($attribute, $value, $fail) {
-                        $existingEntries = \App\Models\VehicleCount::whereDate('date', $value)->get();
+                "date" => [
+                "required",
+                "date",
+                "before_or_equal:" . now()->toDateString(),
+                function ($attribute, $value, $fail) {
+                    $targetLocationId = request('target_location_id');
+                    // dd($value); this return  2025-03-26 and it's existing on vehicle_counts.date but still accepting
 
-                        // Allow at most one AM and one PM entry
-                        $amExists = $existingEntries->contains(function ($entry) {
-                            return \Carbon\Carbon::parse($entry->time)->format('A') === 'AM';
-                        });
-
-                        $pmExists = $existingEntries->contains(function ($entry) {
-                            return \Carbon\Carbon::parse($entry->time)->format('A') === 'PM';
-                        });
-
-                        $currentTime = \Carbon\Carbon::parse(request('time'))->format('A');
-
-                        if (($amExists && $currentTime === 'AM') || ($pmExists && $currentTime === 'PM')) {
-                            $fail("Only one AM and one PM entry are allowed per day.");
-                        }
+                    if (!$targetLocationId) {
+                        $fail("The target location ID is required.");
+                        return;
                     }
+
+                    $existingEntries = DB::table('target_locations_vehicle_counts')
+                        ->join('vehicle_counts', 'target_locations_vehicle_counts.vehicle_count_id', '=', 'vehicle_counts.id')
+                        ->whereDate('vehicle_counts.date', $value)
+                        ->where('target_locations_vehicle_counts.target_location_id', $targetLocationId)
+                        ->select('vehicle_counts.time')
+                        ->get();
+
+                    $amExists = $existingEntries->contains(fn ($entry) => Carbon::parse($entry->time)->format('A') === 'AM');
+                    $pmExists = $existingEntries->contains(fn ($entry) => Carbon::parse($entry->time)->format('A') === 'PM');
+
+                    $currentTime = request('time') ? Carbon::parse(request('time'))->format('A') : null;
+
+                    if (!$currentTime) {
+                        $fail("The time field is required.");
+                        return;
+                    }
+
+                    if (($amExists && $currentTime === 'AM') || ($pmExists && $currentTime === 'PM')) {
+                        $fail("Only one AM and one PM entry are allowed per day for this target location.");
+                    }
+
+                }
             ],
-           "time" => ["sometimes", "required", "date_format:H:i:s", "before_or_equal:23:59:59"],
-            "total_left" => "sometimes:required",
-            "total_right" => "sometimes:required",
-            "target_locations" => ["required","exists:target_locations,id"],
+           "time" => [
+                "required",
+                "date_format:H:i:s",
+                "regex:/^(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d$/"
+           ],
+            "total_left" => "required|integer",
+            "total_right" => "required|integer",
+            "target_location_id" => ["required", "exists:target_locations,id"],
         ];
     }
 

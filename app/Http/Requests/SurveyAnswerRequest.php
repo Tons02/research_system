@@ -22,7 +22,7 @@ class SurveyAnswerRequest extends FormRequest
     public function rules(): array
     {
         return [
-            //
+            "target_location_id" => ["required","exists:target_locations,id"]
         ];
     }
 }

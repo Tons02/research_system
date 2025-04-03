@@ -2,7 +2,7 @@
 
 namespace App\Exports\TrafficCounts;
 
-use App\Models\VehicleCount;
+use App\Models\FootCount;
 use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithCharts;
@@ -27,21 +27,20 @@ use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Style\Style;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
-class VehicleCountAverageExport implements FromCollection, WithHeadings, WithStyles, WithTitle, WithMapping, WithDefaultStyles, WithColumnWidths, WithColumnFormatting, WithEvents
+class FootCountAverageExport implements FromCollection, WithHeadings, WithStyles, WithTitle, WithMapping, WithDefaultStyles, WithColumnWidths, WithColumnFormatting, WithEvents
 {
-    protected $target_locations, $vehicleCounts;
+    protected $target_locations, $footCounts;
 
     public function __construct($target_locations)
     {
-
         $this->target_locations = $target_locations;
 
 
-        // Fetch vehicle counts and filter by location using whereHas
-        $data = DB::table('target_locations_vehicle_counts')
-            ->join('vehicle_counts', 'target_locations_vehicle_counts.vehicle_count_id', '=', 'vehicle_counts.id')
-            ->join('target_locations', 'target_locations_vehicle_counts.target_location_id', '=', 'target_locations.id')
-            ->where('target_locations_vehicle_counts.target_location_id', $this->target_locations)
+        // Fetch foot counts and filter by location using whereHas
+        $data = DB::table('target_locations_foot_counts')
+            ->join('foot_counts', 'target_locations_foot_counts.foot_count_id', '=', 'foot_counts.id')
+            ->join('target_locations', 'target_locations_foot_counts.target_location_id', '=', 'target_locations.id')
+            ->where('target_locations_foot_counts.target_location_id', $this->target_locations)
             ->orderBy('date', 'asc')
             ->get();
 
@@ -52,7 +51,7 @@ class VehicleCountAverageExport implements FromCollection, WithHeadings, WithSty
         $result = [];
 
         foreach ($groupedByDate as $date => $records) {
-            $amTotal = $pmTotal = 0;
+            $totalFemale = $totalMale = 0;
             $totalGrandTotal = 0;
 
 
@@ -60,9 +59,9 @@ class VehicleCountAverageExport implements FromCollection, WithHeadings, WithSty
             foreach ($records as $record) {
                 // Add the grand total to the respective period (AM or PM)
                 if ($record->time_period === 'AM') {
-                    $amTotal += $record->grand_total;
+                    $totalFemale += $record->grand_total;
                 } elseif ($record->time_period === 'PM') {
-                    $pmTotal += $record->grand_total;
+                    $totalMale += $record->grand_total;
                 }
 
                 // Sum the grand totals for both AM and PM combined
@@ -70,8 +69,8 @@ class VehicleCountAverageExport implements FromCollection, WithHeadings, WithSty
             }
 
             // Calculate the percentage for AM and PM
-            $amPercentage = $totalGrandTotal > 0 ? ($amTotal / $totalGrandTotal) : 0;
-            $pmPercentage = $totalGrandTotal > 0 ? ($pmTotal / $totalGrandTotal) : 0;
+            $femalePercentage = $totalGrandTotal > 0 ? ($totalFemale / $totalGrandTotal) : 0;
+            $malePercentage = $totalGrandTotal > 0 ? ($totalMale / $totalGrandTotal) : 0;
 
             // Store the result for this date
             $result[] = [
@@ -82,53 +81,51 @@ class VehicleCountAverageExport implements FromCollection, WithHeadings, WithSty
                     $records[0]->barangay ?? null
                 ]))),
                 'date' => $date,
-                'am_total' => $amTotal,
-                'pm_total' => $pmTotal,
+                'total_female' => $totalFemale,
+                'total_male' => $totalMale,
                 'grand_total' => $totalGrandTotal,
-                'am_percentage' => round($amPercentage, 2),
-                'pm_percentage' => round($pmPercentage, 2),
+                'female_percentage' => round($femalePercentage, 2),
+                'male_percentage' => round($malePercentage, 2),
             ];
         }
 
-        // Assign the result to the vehicleCounts property
-        $this->vehicleCounts = $result;
+        // Assign the result to the footCounts property
+        $this->footCounts = $result;
+
     }
 
     public function collection()
     {
-        // Return the collection of vehicle counts
-        return collect($this->vehicleCounts);
+        return collect($this->footCounts);
     }
-
 
 
     public function title(): string
     {
-        return 'Vehicle Average';
+        return 'Foot Count Average';
     }
 
     public function headings(): array
     {
         return [
-            ["VEHICULAR AVERAGE ON {$this->collection()->first()['target_location']}"],
+            ["FOOT AVERAGE ON {$this->collection()->first()['target_location']}"],
             [],
             [
-               'DATE', 'DAY', 'TOTAL', 'AM', 'PM'
+               'DATE', 'DAY', 'TOTAL', 'FEMALE', 'MALE'
             ]
         ];
     }
 
-    public function map($vehicle_count): array
+    public function map($foot_count): array
     {
         return [
-            $vehicle_count['date'], // Access as array
-            strtoupper(date("l", strtotime($vehicle_count['date']))),
-            $vehicle_count['grand_total'], // Access as array
-            $vehicle_count['am_percentage'], // Access as array
-            $vehicle_count['pm_percentage'], // Access as array
+            $foot_count['date'],
+            strtoupper(date("l", strtotime($foot_count['date']))),
+            $foot_count['grand_total'],
+            $foot_count['female_percentage'],
+            $foot_count['male_percentage'],
         ];
     }
-
 
     public function styles(Worksheet $sheet)
     {
@@ -227,8 +224,8 @@ class VehicleCountAverageExport implements FromCollection, WithHeadings, WithSty
     public function columnFormats(): array
     {
         return [
-            "D" =>  '0%',
-            "E" =>  '0%',
+            "D" =>  '0.00%',
+            "E" =>  '0.00%',
         ];
     }
     public function registerEvents(): array
@@ -299,13 +296,13 @@ class VehicleCountAverageExport implements FromCollection, WithHeadings, WithSty
     // public function charts()
     // {
     //     // Count how many rows of data exist
-    //     $rowCount = $this->vehicleCounts->count();
+    //     $rowCount = $this->footCounts->count();
 
     //     // Define dynamic range for categories (DAYS)
-    //     $categories = [new DataSeriesValues('String', "'Vehicle Average'!\$B\$4:\$B\$" . ($rowCount + 4), null, $rowCount)];
+    //     $categories = [new DataSeriesValues('String', "'Foot Average'!\$B\$4:\$B\$" . ($rowCount + 4), null, $rowCount)];
 
     //     // Define dynamic range for values (TOTALS)
-    //     $values = [new DataSeriesValues('Number', "'Vehicle Average'!\$C\$4:\$C\$" . ($rowCount + 4), null, $rowCount, [], 'Average')];
+    //     $values = [new DataSeriesValues('Number', "'Foot Average'!\$C\$4:\$C\$" . ($rowCount + 4), null, $rowCount, [], 'Average')];
 
     //     // Create the data series
     //     $series = new DataSeries(

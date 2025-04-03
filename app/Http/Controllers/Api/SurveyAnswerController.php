@@ -9,6 +9,7 @@ use App\Models\QuestionAnswer;
 use App\Models\SurveyAnswer;
 use Essa\APIToolKit\Api\ApiResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class SurveyAnswerController extends Controller
 {
@@ -37,72 +38,82 @@ class SurveyAnswerController extends Controller
 
     public function store(SurveyAnswerRequest $request){
 
-        $create_survey_answer = SurveyAnswer::create([
-            "target_location_id" => $request["target_location_id"],
-            "name" => $request["name"],
-            "age" => $request["age"],
-            "gender" => $request["gender"],
-            "address" => $request["address"],
-            "contact_number" => $request["contact_number"],
-            "date" =>  $request["date"],
-            "income_class" =>  $request["income_class"],
-            "monthly_utility_expenses" =>  $request["monthly_utility_expenses"],
-            "educational_attainment" =>  $request["educational_attainment"],
-            "employment_status" =>  $request["employment_status"],
-            "occupation" =>  $request["occupation"],
-            "structure_of_house" =>  $request["structure_of_house"],
-            "ownership_of_house" =>  $request["ownership_of_house"],
-            "questionnaire_answer" => $request["questionnaire_answer"],
-            "surveyor_id" => auth('sanctum')->user()->id,
-        ]);
+        DB::beginTransaction(); // Start the transaction
 
-        $questionnaire_answers = $request->input('questionnaire_answer');
+        try {
+            $create_survey_answer = SurveyAnswer::create([
+                "target_location_id" => $request["target_location_id"],
+                "name" => $request["name"],
+                "age" => $request["age"],
+                "gender" => $request["gender"],
+                "address" => $request["address"],
+                "contact_number" => $request["contact_number"],
+                "date" =>  $request["date"],
+                "family_size" =>  $request["family_size"],
+                "income_class" =>  $request["income_class"],
+                "sub_income_class" =>  $request["sub_income_class"],
+                "monthly_utility_expenses" =>  $request["monthly_utility_expenses"],
+                "sub_monthly_utility_expenses" =>  $request["monthly_utility_expenses"],
+                "educational_attainment" =>  $request["educational_attainment"],
+                "employment_status" =>  $request["employment_status"],
+                "occupation" =>  $request["occupation"],
+                "structure_of_house" =>  $request["structure_of_house"],
+                "ownership_of_house" =>  $request["ownership_of_house"],
+                "questionnaire_answer" => $request["questionnaire_answer"],
+                "surveyor_id" => auth('sanctum')->user()->id,
+            ]);
 
-        // Loop through each section
-        foreach ($questionnaire_answers as $questionnaire_answer) {
-            // Loop through each question within the section
-            foreach ($questionnaire_answer['questions'] as $question) {
-                // Handle grid type questions separately
-                if ($question['questionType'] === 'grid') {
-                    foreach ($question['answer'] as $gridAnswer) {
-                        if ($gridAnswer['rowAnswer'] === "") {
-                            continue; // Skip if the answer is empty
+            $questionnaire_answers = $request->input('questionnaire_answer');
+
+            foreach ($questionnaire_answers as $questionnaire_answer) {
+                foreach ($questionnaire_answer['questions'] as $question) {
+                    if ($question['questionType'] === 'grid') {
+                        foreach ($question['answer'] as $gridAnswer) {
+                            if ($gridAnswer['rowAnswer'] === "") {
+                                continue;
+                            }
+
+                            $finalAnswer = $gridAnswer['rowAnswer'] === "Other"
+                                ? (is_array($gridAnswer['otherAnswer']) ? implode(', ', $gridAnswer['otherAnswer']) : $gridAnswer['otherAnswer'])
+                                : $gridAnswer['rowAnswer'];
+
+                            QuestionAnswer::create([
+                                'survey_id' => $create_survey_answer->id,
+                                'question_type' => $question['questionType'],
+                                'question' => $question['questionName'] . ' - ' . $gridAnswer['rowQuestion'],
+                                'answer' => $finalAnswer,
+                            ]);
                         }
+                    } else {
+                        $answers = is_array($question['answer']) ? $question['answer'] : [$question['answer']];
 
-                        $finalAnswer = $gridAnswer['rowAnswer'] === "Other"
-                            ? (is_array($gridAnswer['otherAnswer']) ? implode(', ', $gridAnswer['otherAnswer']) : $gridAnswer['otherAnswer'])
-                            : $gridAnswer['rowAnswer'];
+                        foreach ($answers as $answer) {
+                            if ($answer === "") {
+                                continue;
+                            }
 
-                        QuestionAnswer::create([
-                            'survey_id' => $create_survey_answer->id,
-                            'question_type' => $question['questionType'],
-                            'question' => $question['questionName'] . ' - ' . $gridAnswer['rowQuestion'],
-                            'answer' => $finalAnswer,
-                        ]);
-                    }
-                } else {
-                    $answers = is_array($question['answer']) ? $question['answer'] : [$question['answer']];
+                            $finalAnswer = $answer === "Other"
+                                ? (is_array($question['otherAnswer']) ? implode(', ', $question['otherAnswer']) : $question['otherAnswer'])
+                                : $answer;
 
-                    foreach ($answers as $answer) {
-                        if ($answer === "") {
-                            continue; // Skip if the answer is empty
+                            QuestionAnswer::create([
+                                'survey_id' => $create_survey_answer->id,
+                                'question_type' => $question['questionType'],
+                                'question' => $question['questionName'],
+                                'answer' => $finalAnswer,
+                            ]);
                         }
-
-                        $finalAnswer = $answer === "Other"
-                            ? (is_array($question['otherAnswer']) ? implode(', ', $question['otherAnswer']) : $question['otherAnswer'])
-                            : $answer;
-
-                        QuestionAnswer::create([
-                            'survey_id' => $create_survey_answer->id,
-                            'question_type' => $question['questionType'],
-                            'question' => $question['questionName'],
-                            'answer' => $finalAnswer,
-                        ]);
                     }
                 }
             }
+            throw new \Exception('Forced error to test rollback');
+
+            DB::commit();
+            return $this->responseCreated('Survey Answer Successfully Sync', $create_survey_answer);
+        } catch (\Exception $e) {
+            DB::rollBack(); // Rollback transaction if an error occurs
+            return $this->responseServerError('Network Error Please Sync Again', );
         }
-        return $this->responseCreated('Survey Answer Successfully Sync', $create_survey_answer);
     }
 
 }

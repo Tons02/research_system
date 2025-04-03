@@ -2,8 +2,7 @@
 
 namespace App\Exports\TrafficCounts;
 
-use App\Models\VehicleCount;
-use Carbon\Carbon;
+use App\Models\FootCount;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithColumnWidths;
 use Maatwebsite\Excel\Concerns\WithDefaultStyles;
@@ -17,7 +16,7 @@ use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Style\Style;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
-class VehicleCountExport implements FromCollection, WithHeadings, WithStyles, WithTitle, WithMapping, WithDefaultStyles, WithColumnWidths
+class FootCountExport implements FromCollection, WithHeadings, WithStyles, WithTitle, WithMapping, WithDefaultStyles, WithColumnWidths
 {
     protected $target_locations;
 
@@ -28,7 +27,7 @@ class VehicleCountExport implements FromCollection, WithHeadings, WithStyles, Wi
 
     public function collection()
     {
-        return VehicleCount::with('target_locations')
+        return FootCount::with('target_locations')
         ->whereHas('target_locations', function ($query) {
             $query->where('target_location_id', $this->target_locations);
         })
@@ -38,7 +37,7 @@ class VehicleCountExport implements FromCollection, WithHeadings, WithStyles, Wi
 
     public function title(): string
     {
-        return 'Vehicle Count';
+        return 'Foot Count';
     }
 
     public function headings(): array
@@ -53,6 +52,7 @@ class VehicleCountExport implements FromCollection, WithHeadings, WithStyles, Wi
                 $location->city_municipality ?? null,
                 $location->sub_municipality ?? null,
                 $location->barangay ?? null,
+                // $location->street ?? null,
             ];
 
             $formattedLocation = implode(', ', array_filter($locationParts));
@@ -61,23 +61,23 @@ class VehicleCountExport implements FromCollection, WithHeadings, WithStyles, Wi
         }
 
         return [
-            ["VEHICULAR COUNT ON {$formattedLocation}"],
+            ["FOOT COUNT ON {$formattedLocation}"],
             [],
             [
-               'ID', 'DATE', 'TIME', 'LEFT', 'RIGHT', 'GRAND TOTAL'
+               'ID', 'DATE', 'TIME', 'FEMALE', 'MALE', 'GRAND TOTAL'
             ]
         ];
     }
 
-    public function map($vehicle_count): array
+    public function map($foot_count): array
     {
         return [
-            $vehicle_count->id,
-            $vehicle_count->date,
-            date("g:i A", strtotime($vehicle_count->time)),
-            $vehicle_count->total_left,
-            $vehicle_count->total_right,
-            $vehicle_count->grand_total,
+            $foot_count->id,
+            $foot_count->date,
+            date("A", strtotime($foot_count->time)),
+            $foot_count->total_male,
+            $foot_count->total_female,
+            $foot_count->grand_total,
         ];
     }
 
@@ -123,7 +123,7 @@ class VehicleCountExport implements FromCollection, WithHeadings, WithStyles, Wi
                 ],
                 'borders' => [
                         'allBorders' => [
-                            'borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN,
+                            'borderStyle' => Border::BORDER_THIN,
                             'color' => ['rgb' => '000000'],
                         ],
                     ],

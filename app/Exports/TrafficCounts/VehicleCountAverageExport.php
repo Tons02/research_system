@@ -110,7 +110,7 @@ class VehicleCountAverageExport implements FromCollection, WithHeadings, WithSty
     public function headings(): array
     {
         return [
-            ["VEHICULAR AVERAGE ON {$this->collection()->first()['target_location']}"],
+            ["VEHICULAR COUNT AVERAGE ON " . ($this->collection()->first()['target_location'] ?? 'NO AVAILABLE DATA')],
             [],
             [
                'DATE', 'DAY', 'TOTAL', 'AM', 'PM'

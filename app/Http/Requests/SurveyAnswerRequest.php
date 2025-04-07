@@ -22,7 +22,37 @@ class SurveyAnswerRequest extends FormRequest
     public function rules(): array
     {
         return [
-            "target_location_id" => ["required","exists:target_locations,id"]
+            "target_location_id" => ["required","exists:target_locations,id"],
+            "family_size" => [
+                "required",
+                "integer"
+            ],
+            "name" => [
+                "required",
+            ],
+            "age" => [
+                "required",
+                "integer"
+            ],
+            "gender" => [
+                "required",
+                "in:male,female"
+            ],
+            "address" => [
+                "required",
+            ],
+            "contact_number" => [
+                "required",
+                "regex:/^\+63\d{10}$/",
+            ],
+            "date" => [
+                "required",
+                "date",
+            ],
+            "questionnaire_answer" => [
+                "required",
+                "array",
+            ],
         ];
     }
 }

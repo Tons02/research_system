@@ -57,11 +57,11 @@ class FootCountExport implements FromCollection, WithHeadings, WithStyles, WithT
 
             $formattedLocation = implode(', ', array_filter($locationParts));
         } else {
-            $formattedLocation = 'Unknown Location';
+            $formattedLocation = 'NO AVAILABLE DATA';
         }
 
         return [
-            ["FOOT COUNT ON {$formattedLocation}"],
+            ["FOOT COUNT ON " . ($formattedLocation ?? 'NO AVAILABLE DATA')],
             [],
             [
                'ID', 'DATE', 'TIME', 'FEMALE', 'MALE', 'GRAND TOTAL'

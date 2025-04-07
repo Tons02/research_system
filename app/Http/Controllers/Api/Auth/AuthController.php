@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\Auth;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ChangePasswordRequest;
 use App\Http\Requests\ForgetPasswordRequest;
+use App\Http\Resources\LoginResource;
 use App\Models\User;
 use Essa\APIToolKit\Api\ApiResponse;
 use Illuminate\Http\Request;
@@ -21,7 +22,13 @@ class AuthController extends Controller
         $username = $request->username;
         $password = $request->password;
 
-        $login = User::with('role')->where('username', $username)->get()->first();
+        $login = User::with([
+            'role',
+            'target_locations_users' => function ($query) {
+                $query->wherePivot('is_done', 0);
+            }
+        ])->where('username', $username)->first();
+
 
         if (! $login || ! hash::check($password, $login->password)) {
             return $this->responseBadRequest('', 'Invalid Credentials');
@@ -35,7 +42,7 @@ class AuthController extends Controller
         return response()->json([
             'message' => 'Successfully Logged In',
             'token' => $token,
-            'data' => $login,
+            'data' => new LoginResource($login),
         ], 200)->withCookie($cookie);
     }
 
@@ -77,6 +84,6 @@ class AuthController extends Controller
             'password' => Hash::make($request->new_password),
         ]);
 
-        return $this->responseSuccess('Password change successfully'); 
+        return $this->responseSuccess('Password change successfully');
     }
 }

@@ -36,13 +36,30 @@ class TargetLocationResource extends JsonResource
             'street' => $this->street,
             'bound_box' => $this->bound_box,
             'response_limit' => $this->response_limit,
-            'form_id' => $this->form_id,
-            'form' => [
+            'form_history_id' => $this->form_id,
+            'form_history_id' => [
                     'id' => $this->form->id,
                     'title' => $this->form->title,
                     'description' => $this->form->description,
                     'sections' => $this->form->sections,
                     ],
+            'form' => [
+                'id' => $this->form->id,
+                'title' => $this->form->title,
+                'description' => $this->form->description,
+                'sections' => $this->form->sections,
+                ],
+            'surveyors' => $this->target_locations_users->map(function ($surveyor) {
+                return [
+                    'id' => $surveyor->id,
+                    'first_name' => $surveyor->first_name,
+                    'middle_name' => $surveyor->middle_name,
+                    'last_name' => $surveyor->last_name,
+                    'username' => $surveyor->username,
+                    'mobile_number' => $surveyor->mobile_number,
+                    'response_limit' => $surveyor->pivot->response_limit,
+                ];
+            }),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
             'deleted_at' => $this->deleted_at

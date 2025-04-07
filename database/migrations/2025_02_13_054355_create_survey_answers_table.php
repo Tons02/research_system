@@ -21,10 +21,10 @@ return new class extends Migration
             $table->string('contact_number');
             $table->string('date');
             $table->integer('family_size');
-            $table->string('income_class');
-            $table->string('sub_income_class');
+            $table->string('income_class')->nullable();
+            $table->string('sub_income_class')->nullable();
             $table->string('monthly_utility_expenses');
-            $table->string('sub_monthly_utility_expenses');
+            $table->string('sub_monthly_utility_expenses')->nullable();
             $table->string('educational_attainment');
             $table->string('employment_status');
             $table->string('occupation');

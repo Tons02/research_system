@@ -13,6 +13,7 @@ use App\Http\Controllers\Api\LocationController;
 use App\Http\Controllers\Api\RoleController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\FormController;
+use App\Http\Controllers\Api\FormHistoriesController;
 use App\Http\Controllers\Api\QuestionAnswerController;
 use App\Http\Controllers\Api\SurveyAnswerController;
 use App\Http\Controllers\Api\TargetLocationController;
@@ -71,6 +72,10 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::put('form-archived/{id}', [FormController::class, 'archived'])->middleware(['abilities:form-management:crud']);
     Route::resource("forms", FormController::class)->middleware(['abilities:form-management:crud']);
 
+     //Form Controller
+     Route::put('form-history-archived/{id}', [FormHistoriesController::class, 'archived'])->middleware(['abilities:form-management:crud']);
+     Route::resource("forms-history", FormHistoriesController::class)->middleware(['abilities:form-management:crud']);
+
     //Locations Controller
     Route::put('target-location-archived/{id}', [TargetLocationController::class, 'archived'])->middleware(['abilities:target-locations:crud']);
     Route::resource("target-locations", TargetLocationController::class)->middleware(['abilities:target-locations:crud']);
@@ -83,6 +88,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     //Survey Answer Controller
     Route::put('survey-answer-archived/{id}', [SurveyAnswerController::class, 'archived'])->middleware(['abilities:survey-answer:crud']);
     Route::resource("survey-answers", SurveyAnswerController::class)->middleware(['abilities:survey-answer:crud']);
+    Route::get('survey-answer-export', [SurveyAnswerController::class, 'export'])->middleware(['abilities:survey-answer:crud']);
 
     //Question Answers Controller
     Route::resource("question-answers", QuestionAnswerController::class)->middleware(['abilities:survey-answer:crud']);

@@ -15,6 +15,7 @@ class QuestionAnswer extends Model
         'survey_id',
         'question_type',
         'question',
+        'section',
         'answer',
     ];
 

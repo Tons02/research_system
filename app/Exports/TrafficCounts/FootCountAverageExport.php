@@ -108,7 +108,7 @@ class FootCountAverageExport implements FromCollection, WithHeadings, WithStyles
     public function headings(): array
     {
         return [
-            ["FOOT AVERAGE ON {$this->collection()->first()['target_location']}"],
+            ["FOOT COUNT AVERAGE ON " . ($this->collection()->first()['target_location'] ?? 'NO AVAILABLE DATA')],
             [],
             [
                'DATE', 'DAY', 'TOTAL', 'FEMALE', 'MALE'
@@ -228,6 +228,7 @@ class FootCountAverageExport implements FromCollection, WithHeadings, WithStyles
             "E" =>  '0.00%',
         ];
     }
+
     public function registerEvents(): array
     {
         return [

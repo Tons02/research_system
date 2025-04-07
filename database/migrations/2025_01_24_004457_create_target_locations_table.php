@@ -27,12 +27,19 @@ return new class extends Migration
             $table->json('bound_box')->nullable();
 
             $table->integer('response_limit');
-            $table->unsignedInteger("form_id")->index();
+            $table->unsignedInteger("form_id")->index()->nullable();
+            $table->unsignedInteger("form_history_id")->index()->nullable();
+            $table->boolean('is_done');
 
             $table->foreign("form_id")
                 ->references("id")
                 ->on("forms")
                 ->onDelete("cascade");
+
+            $table->foreign("form_history_id")
+            ->references("id")
+            ->on("form_histories")
+            ->onDelete("cascade");
 
             $table->timestamps();
             $table->softDeletes();

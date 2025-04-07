@@ -57,11 +57,11 @@ class VehicleCountExport implements FromCollection, WithHeadings, WithStyles, Wi
 
             $formattedLocation = implode(', ', array_filter($locationParts));
         } else {
-            $formattedLocation = 'Unknown Location';
+            $formattedLocation = 'NO AVAILABLE DATA';
         }
 
         return [
-            ["VEHICULAR COUNT ON {$formattedLocation}"],
+            ["VEHICULAR COUNT ON " . ($formattedLocation ?? 'NO AVAILABLE DATA')],
             [],
             [
                'ID', 'DATE', 'TIME', 'LEFT', 'RIGHT', 'GRAND TOTAL'
@@ -74,7 +74,7 @@ class VehicleCountExport implements FromCollection, WithHeadings, WithStyles, Wi
         return [
             $vehicle_count->id,
             $vehicle_count->date,
-            date("g:i A", strtotime($vehicle_count->time)),
+            date("A", strtotime($vehicle_count->time)),
             $vehicle_count->total_left,
             $vehicle_count->total_right,
             $vehicle_count->grand_total,

@@ -8,6 +8,12 @@ use App\Http\Resources\TargetLocationResource;
 use Essa\APIToolKit\Api\ApiResponse;
 use App\Models\TargetLocation;
 use App\Http\Requests\TargetLocationRequest;
+use App\Models\Form;
+use App\Models\FormHistories;
+use App\Models\SurveyAnswer;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 
 class TargetLocationController extends Controller
 {
@@ -17,10 +23,10 @@ class TargetLocationController extends Controller
         $status = $request->query('status');
         $pagination = $request->query('pagination');
 
-        $TargetLocation = TargetLocation::with(['form'])
-            ->when($status === "inactive", function ($query) {
-                $query->onlyTrashed();
-            })
+
+        $TargetLocation = TargetLocation::when($status === "inactive", function ($query) {
+            $query->onlyTrashed();
+        })
             ->orderBy('created_at', 'desc')
             ->useFilters()
             ->dynamicPaginate();
@@ -30,38 +36,147 @@ class TargetLocationController extends Controller
         } else {
             $TargetLocation = TargetLocationResource::collection($TargetLocation);
         }
+
         return $this->responseSuccess('Target Location display successfully', $TargetLocation);
     }
 
     public function store(TargetLocationRequest $request)
     {
-        $create_target_location = TargetLocation::create([
-            "target_location" => $request["target_location"],
-            "form_id" => $request["form_id"],
-        ]);
+        DB::beginTransaction(); // Start the transaction
 
-        return $this->responseCreated('Form Successfully Created', $create_target_location);
+        try {
+            // Fetch form, return error if not found
+            $form = Form::find($request["form_id"]);
+            if (!$form) {
+                return $this->responseNotFound('Form not found');
+            }
+
+            // Create form history
+            $create_form_history = FormHistories::create([
+                "title" => $form->title,
+                "description" => $form->description,
+                "sections" => $form->sections,
+            ]);
+
+            // Create target location
+            $create_target_location = TargetLocation::create([
+                "region_psgc_id" => $request["region_psgc_id"],
+                "region" => $request["region"],
+                "province_psgc_id" => $request["province_psgc_id"],
+                "province" => $request["province"],
+                "city_municipality_psgc_id" => $request["city_municipality_psgc_id"],
+                "city_municipality" => $request["city_municipality"],
+                "sub_municipality_psgc_id" => $request["sub_municipality_psgc_id"],
+                "sub_municipality" => $request["sub_municipality"],
+                "barangay_psgc_id" => $request["barangay_psgc_id"],
+                "barangay" => $request["barangay"],
+                "street" => $request["street"],
+                "bound_box" => $this->getBoundBox(implode(', ', array_filter([
+                    $request["barangay"],
+                    $request["city_municipality"],
+                    $request["province"],
+                    $request["region"],
+                    'Philippines'
+                ]))) ?? [],
+                "response_limit" => $request["response_limit"],
+                "form_history_id" => $create_form_history->id,
+                "is_done" => 0,
+            ]);
+
+            // Attach surveyors to the target location (using the pivot table with additional attributes)
+            foreach ($request['surveyors'] as $surveyor) {
+                $create_target_location->target_locations_users()->attach(
+                    $surveyor['user_id'],
+                    ['response_limit' => $surveyor['response_limit']],
+                );
+            }
+
+            DB::commit();
+            return $this->responseCreated('Form Successfully Created', $create_target_location);
+        } catch (\Exception $e) {
+            DB::rollBack(); // Rollback transaction if an error occurs
+            return $this->responseServerError('Network Error Please Try Again');
+        }
     }
+
 
     public function update(TargetLocationRequest $request, $id)
     {
-        $target_location_id = TargetLocation::find($id);
+        DB::beginTransaction(); // Start the transaction
 
-        if (!$target_location_id) {
-            return $this->responseUnprocessable('', 'Invalid ID provided for updating. Please check the ID and try again.');
+        try {
+
+            $target_location = TargetLocation::find($id); // Correct variable assignment
+
+            if (!$target_location) {
+                return $this->responseUnprocessable('', 'Invalid ID provided for updating. Please check the ID and try again.');
+            }
+
+            // Update the target location details
+            $target_location->region_psgc_id = $request['region_psgc_id'];
+            $target_location->region = $request['region'];
+            $target_location->province_psgc_id = $request['province_psgc_id'];
+            $target_location->province = $request['province'];
+            $target_location->city_municipality_psgc_id = $request['city_municipality_psgc_id'];
+            $target_location->city_municipality = $request['city_municipality'];
+            $target_location->sub_municipality_psgc_id = $request['sub_municipality_psgc_id'];
+            $target_location->sub_municipality = $request['sub_municipality'];
+            $target_location->barangay_psgc_id = $request['barangay_psgc_id'];
+            $target_location->barangay = $request['barangay'];
+            $target_location->street = $request['street'];
+            $target_location->response_limit = $request['response_limit'];
+            $target_location->bound_box = $this->getBoundBox(implode(', ', array_filter([
+                $request["barangay"],
+                $request["city_municipality"],
+                $request["province"],
+                $request["region"],
+                'Philippines'
+            ]))) ?? [];
+
+            // Track if any of the target location fields changed
+            $targetLocationUpdated = $target_location->isDirty();
+
+            // Check if surveyors pivot table has changes
+            $existingSurveyorIds = $target_location->target_locations_users->pluck('id')->toArray();
+            $pivotChanged = false;
+
+            // Loop through the surveyors provided in the request
+            foreach ($request['surveyors'] as $surveyor) {
+                // Only update if the user_id already exists in the pivot
+                if (in_array($surveyor['user_id'], $existingSurveyorIds)) {
+                    // Fetch the pivot row
+                    $pivot = $target_location->target_locations_users()->where('user_id', $surveyor['user_id'])->first();
+
+                    // Check if response_limit needs to be updated
+                    if ($pivot && $pivot->pivot->response_limit != $surveyor['response_limit']) {
+                        // Update only the response_limit
+                        $target_location->target_locations_users()->updateExistingPivot(
+                            $surveyor['user_id'],
+                            ['response_limit' => $surveyor['response_limit']]
+                        );
+                        $pivotChanged = true;
+                    }
+                }
+            }
+
+
+            // If there were no changes at all
+            if (!$targetLocationUpdated && !$pivotChanged) {
+                return $this->responseSuccess('No Changes', $target_location);
+            }
+
+            // Save target location and pivot changes
+            $target_location->save();
+
+            DB::commit();
+            return $this->responseSuccess('Target Location successfully updated', $target_location);
+        } catch (\Exception $e) {
+            DB::rollBack(); // Rollback transaction if an error occurs
+            return $this->responseServerError('Network Error Please Try Again');
         }
-
-        $target_location_id->target_location = $request['target_location'];
-        $target_location_id->form_id = $request['form_id'];
-
-        if (!$target_location_id->isDirty()) {
-            return $this->responseSuccess('No Changes', $target_location_id);
-        }
-
-        $target_location_id->save();
-
-        return $this->responseSuccess('Role successfully updated', $target_location_id);
     }
+
+
 
     public function archived(Request $request, $id)
     {
@@ -78,13 +193,45 @@ class TargetLocationController extends Controller
             return $this->responseSuccess('Target Location successfully restore', $target_location);
         }
 
+        // need to put this one once the survey answer is already created
+        if (SurveyAnswer::where('target_location_id', $id)->exists()) {
+
+            return $this->responseUnprocessable('', 'Unable to Archive, Target location already in used!');
+        }
+
         if (!$target_location->deleted_at) {
 
-            $target_location->delete();
+            DB::beginTransaction();
 
-            return $this->responseSuccess('Target Location successfully archive', $target_location);
+            try {
+
+                $target_location->target_locations_users()->detach();
+                $target_location->delete();
+
+                DB::commit();
+                return $this->responseSuccess('Target Location successfully archived', $target_location);
+            } catch (\Exception $e) {
+                DB::rollBack();
+                return $this->responseServerError('Network Error Please Try Again');
+            }
         }
     }
 
+    protected function getBoundBox($location)
+    {
+        $response = Http::withHeaders([
+            'User-Agent' => 'Research System' // Replace with your app info
+        ])->get("https://nominatim.openstreetmap.org/search", [
+            'q' => $location,
+            'format' => 'json',
+            'polygon_geojson' => 1,
+        ]);
 
+        if ($response->successful() && !empty($response->json())) {
+            $data = $response->json();
+            return !empty($data[0]['boundingbox']) ? $data[0]['boundingbox'] : null;
+        }
+
+        return null; // Return null instead of the full response
+    }
 }

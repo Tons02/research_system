@@ -53,6 +53,22 @@ class UserResource extends JsonResource
                 'name' => $this->role->name,
                 'access_permission' => $this->role->access_permission
             ],
+            'target_locations' => $this->target_locations_users->map(function ($surveyor) {
+                return [
+                    'id' => $surveyor->id,
+                    'target_location' => implode(', ', array_filter([
+                    $surveyor->region,
+                    $surveyor->province,
+                    $surveyor->city_municipality,
+                    $surveyor->sub_municipality,
+                    $surveyor->barangay
+                    ])),
+                    'bound_box' => $surveyor->bound_box,
+                    'total_response_limit' => $surveyor->response_limit,
+                    'user_limit' => $surveyor->pivot->response_limit,
+                    'is_done' => $surveyor->pivot->is_done,
+                ];
+            }),
             'created_at' => $this->created_at,
             'deleted_at' => $this->deleted_at
         ];

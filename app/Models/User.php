@@ -109,4 +109,17 @@ class User extends Authenticatable
     {
         return $this->belongsTo(Role::class, 'role_id')->withTrashed();
     }
+
+    public function target_locations_users()
+    {
+        return $this->belongsToMany(
+            TargetLocation::class,
+            "target_locations_users",
+            "user_id",
+            "target_location_id",
+            "id",
+            "id"
+        )->withPivot('response_limit','is_done');
+    }
+
 }

@@ -34,7 +34,7 @@ class CompanyController extends Controller
             ['company_code', 'company_name', 'updated_at', 'deleted_at']
         );
 
-        event(new PublicChannelEventSyncingCompanies("Laravel Reverb Sync Companies"));
+        // event(new PublicChannelEventSyncingCompanies("Laravel Reverb Sync Companies"));
         return $this->responseSuccess('Sync companies successfully');
     }
 }

@@ -26,4 +26,5 @@ class UserFilter extends QueryFilters
         'location' => ['location_name'],
         'role' => ['name']
     ];
+
 }

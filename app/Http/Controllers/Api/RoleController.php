@@ -8,6 +8,7 @@ use App\Http\Requests\RoleRequest;
 use Essa\APIToolKit\Api\ApiResponse;
 use App\Models\Role;
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
 
 class RoleController extends Controller
 {
@@ -32,30 +33,42 @@ class RoleController extends Controller
             "name" => $request->name,
             "access_permission" => $request->access_permission,
         ]);
-        
+
 
         return $this->responseCreated('Role Successfully Created', $create_role);
     }
 
     public function update(RoleRequest $request, $id)
     {
-        $role_id = Role::find($id);
+        $role = Role::find($id);
 
-        if (!$role_id) {
+        if (!$role) {
             return $this->responseUnprocessable('', 'Invalid ID provided for updating. Please check the ID and try again.');
         }
 
-        $role_id->name = $request['name'];
-        $role_id->access_permission = $request['access_permission'];
+        $previousName = $role->name;
 
-        if (!$role_id->isDirty()) {
-            return $this->responseSuccess('No Changes', $role_id);
+        $role->name = $request['name'];
+        $role->access_permission = $request['access_permission'];
+
+        if (!$role->isDirty()) {
+            return $this->responseSuccess('No Changes', $role);
         }
 
-        $role_id->save();
+        // Save updated role
+        $role->save();
 
-        return $this->responseSuccess('Role successfully updated', $role_id);
+        // Update access token abilities in personal_access_tokens
+        DB::table('personal_access_tokens')
+            ->where('name', $previousName) // Match with previous role name
+            ->update([
+                'abilities' => json_encode($request['access_permission']),
+                'name' => $request['name'] // Update token name as well
+            ]);
+
+        return $this->responseSuccess('Role successfully updated', $role);
     }
+
 
     public function archived(Request $request, $id)
     {

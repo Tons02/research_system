@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Essa\APIToolKit\Api\ApiResponse;
 use App\Models\Form;
 use App\Http\Requests\FormsRequest;
+use App\Models\TargetLocation;
 
 class FormController extends Controller
 {
@@ -30,7 +31,7 @@ class FormController extends Controller
 
         $Form = Form::where('id', $id)->get();
 
-        if($Form->isEmpty()){
+        if ($Form->isEmpty()) {
             return $this->responseUnprocessable('', 'Invalid ID');
         }
 
@@ -86,9 +87,15 @@ class FormController extends Controller
         }
 
         // need to put this one once the survey answer is already created
-        // if (Survey::where('form_id', $id)->exists()) {
-        //     return $this->responseUnprocessable('', 'Unable to Archive, Form already in used!');
-        // }
+        if (TargetLocation::where('form_id', $id)->exists()) {
+            return $this->responseUnprocessable('', 'Unable to Archive, Form already in used!');
+        }
+
+
+        if (TargetLocation::where('form_id', $id)->exists()) {
+            return $this->responseUnprocessable('', 'Unable to Archive, Form already in used!');
+        }
+
 
         if (!$form->deleted_at) {
 

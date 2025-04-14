@@ -14,6 +14,8 @@ return new class extends Migration
         Schema::create('question_answers', function (Blueprint $table) {
             $table->increments('id');
             $table->string('survey_id');
+            $table->string('income_class');
+            $table->string('sub_income_class')->nullable();
             $table->string('section')->nullable();
             $table->string('question_type');
             $table->string('question');

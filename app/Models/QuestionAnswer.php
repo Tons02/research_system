@@ -13,9 +13,11 @@ class QuestionAnswer extends Model
 
     protected $fillable = [
         'survey_id',
+        'income_class',
+        'sub_income_class',
+        'section',
         'question_type',
         'question',
-        'section',
         'answer',
     ];
 

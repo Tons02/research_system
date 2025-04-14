@@ -57,10 +57,6 @@ class AuthController extends Controller
     {
         $user = User::where('id', $id)->first();
 
-        // if ($id == auth('sanctum')->user()->id) {
-        //     return $this->responseUnprocessable('', 'Unable to Reset Password, User already in used!');
-        // }
-
         if (!$user) {
             return $this->responseUnprocessable('', 'Invalid ID provided for updating password. Please check the ID and try again.');
         }

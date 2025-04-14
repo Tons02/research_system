@@ -24,18 +24,17 @@ class TargetLocationController extends Controller
         $pagination = $request->query('pagination');
 
 
-        $TargetLocation = TargetLocation::
-        when($status === "inactive", function ($query) {
+        $TargetLocation = TargetLocation::when($status === "inactive", function ($query) {
             $query->onlyTrashed();
         })
-        ->orderBy('created_at', 'desc')
-        ->useFilters()
-        ->dynamicPaginate();
+            ->orderBy('created_at', 'desc')
+            ->useFilters()
+            ->dynamicPaginate();
 
         if (!$pagination) {
             TargetLocationResource::collection($TargetLocation);
         } else {
-           $TargetLocation = TargetLocationResource::collection($TargetLocation);
+            $TargetLocation = TargetLocationResource::collection($TargetLocation);
         }
 
         return $this->responseSuccess('Target Location display successfully', $TargetLocation);
@@ -107,78 +106,74 @@ class TargetLocationController extends Controller
 
         try {
 
-        $target_location = TargetLocation::find($id); // Correct variable assignment
+            $target_location = TargetLocation::find($id); // Correct variable assignment
 
-        if (!$target_location) {
-            return $this->responseUnprocessable('', 'Invalid ID provided for updating. Please check the ID and try again.');
-        }
-
-        // Update the target location details
-        $target_location->region_psgc_id = $request['region_psgc_id'];
-        $target_location->region = $request['region'];
-        $target_location->province_psgc_id = $request['province_psgc_id'];
-        $target_location->province = $request['province'];
-        $target_location->city_municipality_psgc_id = $request['city_municipality_psgc_id'];
-        $target_location->city_municipality = $request['city_municipality'];
-        $target_location->sub_municipality_psgc_id = $request['sub_municipality_psgc_id'];
-        $target_location->sub_municipality = $request['sub_municipality'];
-        $target_location->barangay_psgc_id = $request['barangay_psgc_id'];
-        $target_location->barangay = $request['barangay'];
-        $target_location->street = $request['street'];
-        $target_location->response_limit = $request['response_limit'];
-        $target_location->bound_box = $this->getBoundBox(implode(', ', array_filter([
-            $request["barangay"],
-            $request["city_municipality"],
-            $request["province"],
-            $request["region"],
-            'Philippines'
-        ]))) ?? [];
-
-        // Track if any of the target location fields changed
-        $targetLocationUpdated = $target_location->isDirty();
-
-        // Check if surveyors pivot table has changes
-        $existingSurveyorIds = $target_location->target_locations_users->pluck('id')->toArray();
-        $pivotChanged = false;
-
-        // Loop through the surveyors provided in the request
-        foreach ($request['surveyors'] as $surveyor) {
-            // If the surveyor already exists in the pivot table
-            if (in_array($surveyor['user_id'], $existingSurveyorIds)) {
-                // Check if the response_limit has changed
-                $pivot = $target_location->target_locations_users()->where('user_id', $surveyor['user_id'])->first();
-                if ($pivot && $pivot->pivot->response_limit != $surveyor['response_limit']) {
-                    // If the response_limit is different, update the pivot
-                    $target_location->target_locations_users()->updateExistingPivot(
-                        $surveyor['user_id'],
-                        ['response_limit' => $surveyor['response_limit']]
-                    );
-                    $pivotChanged = true; // Mark that the pivot has changed
-                }
-            } else {
-                // If the surveyor does not exist, attach it
-                $target_location->target_locations_users()->attach(
-                    $surveyor['user_id'],
-                    ['response_limit' => $surveyor['response_limit']]
-                );
-                $pivotChanged = true; // Mark that the pivot has changed
+            if (!$target_location) {
+                return $this->responseUnprocessable('', 'Invalid ID provided for updating. Please check the ID and try again.');
             }
+
+            // Update the target location details
+            $target_location->region_psgc_id = $request['region_psgc_id'];
+            $target_location->region = $request['region'];
+            $target_location->province_psgc_id = $request['province_psgc_id'];
+            $target_location->province = $request['province'];
+            $target_location->city_municipality_psgc_id = $request['city_municipality_psgc_id'];
+            $target_location->city_municipality = $request['city_municipality'];
+            $target_location->sub_municipality_psgc_id = $request['sub_municipality_psgc_id'];
+            $target_location->sub_municipality = $request['sub_municipality'];
+            $target_location->barangay_psgc_id = $request['barangay_psgc_id'];
+            $target_location->barangay = $request['barangay'];
+            $target_location->street = $request['street'];
+            $target_location->response_limit = $request['response_limit'];
+            $target_location->bound_box = $this->getBoundBox(implode(', ', array_filter([
+                $request["barangay"],
+                $request["city_municipality"],
+                $request["province"],
+                $request["region"],
+                'Philippines'
+            ]))) ?? [];
+
+            // Track if any of the target location fields changed
+            $targetLocationUpdated = $target_location->isDirty();
+
+            // Check if surveyors pivot table has changes
+            $existingSurveyorIds = $target_location->target_locations_users->pluck('id')->toArray();
+            $pivotChanged = false;
+
+            // Loop through the surveyors provided in the request
+            foreach ($request['surveyors'] as $surveyor) {
+                // Only update if the user_id already exists in the pivot
+                if (in_array($surveyor['user_id'], $existingSurveyorIds)) {
+                    // Fetch the pivot row
+                    $pivot = $target_location->target_locations_users()->where('user_id', $surveyor['user_id'])->first();
+
+                    // Check if response_limit needs to be updated
+                    if ($pivot && $pivot->pivot->response_limit != $surveyor['response_limit']) {
+                        // Update only the response_limit
+                        $target_location->target_locations_users()->updateExistingPivot(
+                            $surveyor['user_id'],
+                            ['response_limit' => $surveyor['response_limit']]
+                        );
+                        $pivotChanged = true;
+                    }
+                }
+            }
+
+
+            // If there were no changes at all
+            if (!$targetLocationUpdated && !$pivotChanged) {
+                return $this->responseSuccess('No Changes', $target_location);
+            }
+
+            // Save target location and pivot changes
+            $target_location->save();
+
+            DB::commit();
+            return $this->responseSuccess('Target Location successfully updated', $target_location);
+        } catch (\Exception $e) {
+            DB::rollBack(); // Rollback transaction if an error occurs
+            return $this->responseServerError('Network Error Please Try Again');
         }
-
-        // If there were no changes at all
-        if (!$targetLocationUpdated && !$pivotChanged) {
-            return $this->responseSuccess('No Changes', $target_location);
-        }
-
-        // Save target location and pivot changes
-        $target_location->save();
-
-        DB::commit();
-        return $this->responseSuccess('Target Location successfully updated', $target_location);
-    } catch (\Exception $e) {
-        DB::rollBack(); // Rollback transaction if an error occurs
-        return $this->responseServerError('Network Error Please Try Again');
-    }
     }
 
 
@@ -198,17 +193,27 @@ class TargetLocationController extends Controller
             return $this->responseSuccess('Target Location successfully restore', $target_location);
         }
 
-         // need to put this one once the survey answer is already created
-         if (SurveyAnswer::where('target_location_id', $id)->exists()) {
+        // need to put this one once the survey answer is already created
+        if (SurveyAnswer::where('target_location_id', $id)->exists()) {
 
             return $this->responseUnprocessable('', 'Unable to Archive, Target location already in used!');
         }
 
         if (!$target_location->deleted_at) {
 
-            $target_location->delete();
+            DB::beginTransaction();
 
-            return $this->responseSuccess('Target Location successfully archive', $target_location);
+            try {
+
+                $target_location->target_locations_users()->detach();
+                $target_location->delete();
+
+                DB::commit();
+                return $this->responseSuccess('Target Location successfully archived', $target_location);
+            } catch (\Exception $e) {
+                DB::rollBack();
+                return $this->responseServerError('Network Error Please Try Again');
+            }
         }
     }
 
@@ -229,7 +234,4 @@ class TargetLocationController extends Controller
 
         return null; // Return null instead of the full response
     }
-
-
-
 }

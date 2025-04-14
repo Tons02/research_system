@@ -94,17 +94,18 @@ class DemographicExport implements FromCollection, WithTitle, WithHeadings, With
 
         // class C query
         $this->class_counts = SurveyAnswer::where('target_location_id', $target_location_id)
-        ->distinct('income_class')
-        ->count();
+            ->distinct('income_class')
+            ->count();
 
 
         // EDUCATION
-       // Predefine all required income classes (including those that might have zero counts)
+        // Predefine all required income classes (including those that might have zero counts)
         $requiredClasses = ['Class AB', 'Class C', 'Class DE'];
 
         // Get existing classes from the database
         $incomeClasses = DB::table('survey_answers')
             ->select('income_class')
+            ->where('target_location_id', $target_location_id)
             ->whereNotNull('income_class')
             ->distinct()
             ->pluck('income_class')
@@ -182,16 +183,16 @@ class DemographicExport implements FromCollection, WithTitle, WithHeadings, With
 
         // First get the counts for each income class
         $classABTotal = SurveyAnswer::where('income_class', 'CLASS AB')
-        ->where('target_location_id', $target_location_id)
-        ->count();
+            ->where('target_location_id', $target_location_id)
+            ->count();
         $classCTotal = SurveyAnswer::where('income_class', 'CLASS C')
-        ->where('target_location_id', $target_location_id)
-        ->count();
+            ->where('target_location_id', $target_location_id)
+            ->count();
         $classDETotal = SurveyAnswer::where('income_class', 'CLASS DE')
-        ->where('target_location_id', $target_location_id)
-        ->count();
+            ->where('target_location_id', $target_location_id)
+            ->count();
         $overallTotal = SurveyAnswer::where('target_location_id', $target_location_id)
-        ->count();
+            ->count();
 
 
         // Get data for each employment status
@@ -246,12 +247,12 @@ class DemographicExport implements FromCollection, WithTitle, WithHeadings, With
         $this->employment = $report;
 
 
-       // employed occupation
-       $results_employed_occupation = DB::select("
+        // employed occupation
+        $results_employed_occupation = DB::select("
             SELECT
                 occupation,
                 COUNT(*) as count,
-                CONCAT(ROUND((COUNT(*) * 100.0 / (SELECT COUNT(*) FROM survey_answers WHERE employment_status = 'Employed' AND target_location_id = '$target_location_id')), 2), '%') as percentage
+                CONCAT(ROUND((COUNT(*) * 100.0 / (SELECT COUNT(*) FROM survey_answers WHERE employment_status = 'Employed' AND target_location_id = '$target_location_id')))) as percentage
             FROM
                 survey_answers
             WHERE
@@ -273,14 +274,13 @@ class DemographicExport implements FromCollection, WithTitle, WithHeadings, With
         $total_row = (object)[
             'occupation' => 'TOTAL',
             'count' => $total_count,
-            'percentage' => '100%' // Since it's the sum of all percentages
+            'percentage' => '100'
         ];
 
         // Append the total to the results
         $results_employed_occupation[] = $total_row;
 
         $this->occupation_of_employed = $results_employed_occupation;
-
     }
 
 
@@ -291,12 +291,17 @@ class DemographicExport implements FromCollection, WithTitle, WithHeadings, With
 
         $totalCount = SurveyAnswer::where('target_location_id', $target_location_id)->count();
 
-
-        $data = SurveyAnswer::selectRaw("income_class, COUNT(*) as total, ROUND((COUNT(*) / $totalCount) * 100, 2) as percentage")
+        $data = SurveyAnswer::selectRaw("income_class, COUNT(*) as total, (COUNT(*) / $totalCount) * 100 as percentage")
             ->where('target_location_id', $target_location_id)
             ->groupBy('income_class')
             ->orderBy('income_class', 'asc')
             ->get();
+
+        // Round total and percentage to remove decimals
+        $data->each(function ($item) {
+            $item->total = round($item->total);
+            $item->percentage = round($item->percentage);
+        });
 
         $totalN = $data->sum('total');
         $totalPercentage = $data->sum('percentage');
@@ -304,11 +309,10 @@ class DemographicExport implements FromCollection, WithTitle, WithHeadings, With
         $data->push((object)[
             'income_class' => 'TOTAL',
             'total' => $totalN,
-            'percentage' => $totalPercentage,
+            'percentage' => round($totalPercentage),
         ]);
 
         return $data;
-
     }
 
 
@@ -325,7 +329,9 @@ class DemographicExport implements FromCollection, WithTitle, WithHeadings, With
             [],
             [],
             [
-               'INCOME', 'N', '%'
+                'INCOME',
+                'N',
+                '%'
             ]
         ];
     }
@@ -337,19 +343,18 @@ class DemographicExport implements FromCollection, WithTitle, WithHeadings, With
             $demographics->total,
             $demographics->percentage
         ];
-
     }
 
     public function registerEvents(): array
     {
         return [
-            AfterSheet::class => function(AfterSheet $event) {
+            AfterSheet::class => function (AfterSheet $event) {
                 $sheet = $event->sheet->getDelegate();
 
                 // 🟢 First Dataset (Main Demographics)
                 $firstTableStartRow = 4; // Assuming headers start at row 4
                 $demographicsCount = $this->class_counts; // Get the count of demographics data
-                 $firstTableEndRow = $firstTableStartRow + $demographicsCount + 1;
+                $firstTableEndRow = $firstTableStartRow + $demographicsCount + 1;
 
                 // Apply gray styling to the last row of the first dataset
                 $sheet->getStyle("A{$firstTableEndRow}:C{$firstTableEndRow}")->applyFromArray([
@@ -361,7 +366,11 @@ class DemographicExport implements FromCollection, WithTitle, WithHeadings, With
                         'bold' => true,
                         'name' => 'Century Gothic',
                         'size' => 10,
-                    ]
+                    ],
+                    'alignment' => [
+                        'horizontal' => Alignment::HORIZONTAL_CENTER,
+                        'vertical'   => Alignment::VERTICAL_CENTER,
+                    ],
                 ]);
 
                 // 🟡 Second Dataset (Sub Income Class)
@@ -379,7 +388,11 @@ class DemographicExport implements FromCollection, WithTitle, WithHeadings, With
                         'bold' => true,
                         'name' => 'Century Gothic',
                         'size' => 11,
-                    ]
+                    ],
+                    'alignment' => [
+                        'horizontal' => Alignment::HORIZONTAL_CENTER,
+                        'vertical'   => Alignment::VERTICAL_CENTER,
+                    ],
                 ]);
 
                 // Insert sub-income class data dynamically
@@ -388,6 +401,15 @@ class DemographicExport implements FromCollection, WithTitle, WithHeadings, With
                     $sheet->setCellValue("A{$row}", $subIncome->sub_income_class);
                     $sheet->setCellValue("B{$row}", $subIncome->count);
                     $sheet->setCellValue("C{$row}", $subIncome->percentage);
+
+                    $sheet->getStyle("A{$row}:I{$row}")->applyFromArray([
+                        'font' => ['size' => 10, 'name' => 'Century Gothic'],
+                        'alignment' => [
+                            'horizontal' => Alignment::HORIZONTAL_CENTER,
+                            'vertical'   => Alignment::VERTICAL_CENTER,
+                        ],
+                    ]);
+
                     $row++;
                 }
 
@@ -402,7 +424,11 @@ class DemographicExport implements FromCollection, WithTitle, WithHeadings, With
                         'bold' => true,
                         'name' => 'Century Gothic',
                         'size' => 10,
-                    ]
+                    ],
+                    'alignment' => [
+                        'horizontal' => Alignment::HORIZONTAL_CENTER,
+                        'vertical'   => Alignment::VERTICAL_CENTER,
+                    ],
                 ]);
 
                 // Apply borders to both tables
@@ -412,45 +438,62 @@ class DemographicExport implements FromCollection, WithTitle, WithHeadings, With
                             'borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN,
                             'color' => ['rgb' => '000000'],
                         ],
+                        'font' => [
+                            'name' => 'Century Gothic',
+                            'size' => 10,
+                        ]
                     ],
                 ];
                 $sheet->getStyle("A{$firstTableStartRow}:C{$firstTableEndRow}")->applyFromArray($borderStyle);
                 $sheet->getStyle("A10:C{$lastRow}")->applyFromArray($borderStyle);
 
                 // Education Data
-                 $sheet->setCellValue('A17', 'EDUCATION');
-                 $sheet->setCellValue('B17', 'CLASS AB');
-                 $sheet->setCellValue('C17', '%');
-                 $sheet->setCellValue('D17', 'CLASS C');
-                 $sheet->setCellValue('E17', '%');
-                 $sheet->setCellValue('F17', 'CLASS DE');
-                 $sheet->setCellValue('G17', '%');
-                 $sheet->setCellValue('H17', 'TOTAL');
-                 $sheet->setCellValue('I17', '%');
+                $sheet->setCellValue('A17', 'EDUCATION');
+                $sheet->setCellValue('B17', 'CLASS AB');
+                $sheet->setCellValue('C17', '%');
+                $sheet->setCellValue('D17', 'CLASS C');
+                $sheet->setCellValue('E17', '%');
+                $sheet->setCellValue('F17', 'CLASS DE');
+                $sheet->setCellValue('G17', '%');
+                $sheet->setCellValue('H17', 'TOTAL');
+                $sheet->setCellValue('I17', '%');
 
-                 $sheet->getStyle('A17:I17')->applyFromArray([
-                     'fill' => [
-                         'fillType' => Fill::FILL_SOLID,
-                         'startColor' => ['rgb' => '00B050'], // Green header
-                     ],
-                     'font' => [
-                         'bold' => true,
-                         'name' => 'Century Gothic',
-                         'size' => 11,
-                     ]
-                 ]);
+                $sheet->getStyle('A17:I17')->applyFromArray([
+                    'fill' => [
+                        'fillType' => Fill::FILL_SOLID,
+                        'startColor' => ['rgb' => '00B050'], // Green header
+                    ],
+                    'font' => [
+                        'bold' => true,
+                        'name' => 'Century Gothic',
+                        'size' => 11,
+                    ],
+                    'alignment' => [
+                        'horizontal' => Alignment::HORIZONTAL_CENTER,
+                        'vertical'   => Alignment::VERTICAL_CENTER,
+                    ],
+                ]);
 
                 $row = 18;
                 foreach ($this->education_data as $education_class) {
                     $sheet->setCellValue("A{$row}", $education_class['education']);
                     $sheet->setCellValue("B{$row}", $education_class['class_ab_count']);
                     $sheet->setCellValue("C{$row}", $education_class['class_ab_percent']);
-                    $sheet->setCellValue("D{$row}", $education_class['class_c_count']);  // Fixed column
-                    $sheet->setCellValue("E{$row}", $education_class['class_c_percent']); // Fixed column
-                    $sheet->setCellValue("F{$row}", $education_class['class_de_count']);     // Fixed column
-                    $sheet->setCellValue("G{$row}", $education_class['class_de_percent']);   // Fixed column
-                    $sheet->setCellValue("H{$row}", $education_class['total_count']);     // Fixed column
-                    $sheet->setCellValue("I{$row}", $education_class['total_percent']);   // Fixed column
+                    $sheet->setCellValue("D{$row}", $education_class['class_c_count']);
+                    $sheet->setCellValue("E{$row}", $education_class['class_c_percent']);
+                    $sheet->setCellValue("F{$row}", $education_class['class_de_count']);
+                    $sheet->setCellValue("G{$row}", $education_class['class_de_percent']);
+                    $sheet->setCellValue("H{$row}", $education_class['total_count']);
+                    $sheet->setCellValue("I{$row}", $education_class['total_percent']);
+
+                    $sheet->getStyle("A{$row}:I{$row}")->applyFromArray([
+                        'font' => ['size' => 10, 'name' => 'Century Gothic'],
+                        'alignment' => [
+                            'horizontal' => Alignment::HORIZONTAL_CENTER,
+                            'vertical'   => Alignment::VERTICAL_CENTER,
+                        ],
+                    ]);
+
                     $row++;
                 }
 
@@ -501,7 +544,11 @@ class DemographicExport implements FromCollection, WithTitle, WithHeadings, With
                         'bold' => true,
                         'name' => 'Century Gothic',
                         'size' => 11,
-                    ]
+                    ],
+                    'alignment' => [
+                        'horizontal' => Alignment::HORIZONTAL_CENTER,
+                        'vertical'   => Alignment::VERTICAL_CENTER,
+                    ],
                 ]);
 
                 $row = 34;
@@ -514,7 +561,16 @@ class DemographicExport implements FromCollection, WithTitle, WithHeadings, With
                     $sheet->setCellValue("F{$row}", $employment_status['class_de_count']);     // Fixed column
                     $sheet->setCellValue("G{$row}", $employment_status['class_de_percent']);   // Fixed column
                     $sheet->setCellValue("H{$row}", $employment_status['total_count']);     // Fixed column
-                    $sheet->setCellValue("I{$row}", $employment_status['total_percent']);   // Fixed column
+                    $sheet->setCellValue("I{$row}", $employment_status['total_percent']);
+
+                    $sheet->getStyle("A{$row}:I{$row}")->applyFromArray([
+                        'font' => ['size' => 10, 'name' => 'Century Gothic'],
+                        'alignment' => [
+                            'horizontal' => Alignment::HORIZONTAL_CENTER,
+                            'vertical'   => Alignment::VERTICAL_CENTER,
+                        ],
+                    ]);
+
                     $row++;
                 }
 
@@ -559,7 +615,11 @@ class DemographicExport implements FromCollection, WithTitle, WithHeadings, With
                         'bold' => true,
                         'name' => 'Century Gothic',
                         'size' => 11,
-                    ]
+                    ],
+                    'alignment' => [
+                        'horizontal' => Alignment::HORIZONTAL_CENTER,
+                        'vertical'   => Alignment::VERTICAL_CENTER,
+                    ],
                 ]);
 
                 $row = 41;
@@ -567,6 +627,15 @@ class DemographicExport implements FromCollection, WithTitle, WithHeadings, With
                     $sheet->setCellValue("A{$row}", $occupation->occupation);
                     $sheet->setCellValue("B{$row}", $occupation->count);
                     $sheet->setCellValue("C{$row}", $occupation->percentage);
+
+                    $sheet->getStyle("A{$row}:I{$row}")->applyFromArray([
+                        'font' => ['size' => 10, 'name' => 'Century Gothic'],
+                        'alignment' => [
+                            'horizontal' => Alignment::HORIZONTAL_CENTER,
+                            'vertical'   => Alignment::VERTICAL_CENTER,
+                        ],
+                    ]);
+
                     $row++;
                 }
                 // Apply gray styling to the last row of the second dataset
@@ -594,7 +663,6 @@ class DemographicExport implements FromCollection, WithTitle, WithHeadings, With
                 ];
                 $sheet->getStyle("A{$firstTableStartRow}:C{$firstTableEndRow}")->applyFromArray($borderStyle);
                 $sheet->getStyle("A41:C{$lastRow}")->applyFromArray($borderStyle);
-
             }
 
         ];
@@ -643,11 +711,11 @@ class DemographicExport implements FromCollection, WithTitle, WithHeadings, With
                     'size' => 11,
                 ],
                 'borders' => [
-                        'allBorders' => [
-                            'borderStyle' => Border::BORDER_THIN,
-                            'color' => ['rgb' => '000000'],
-                        ],
+                    'allBorders' => [
+                        'borderStyle' => Border::BORDER_THIN,
+                        'color' => ['rgb' => '000000'],
                     ],
+                ],
             ];
         }
         $highestRow = $sheet->getHighestRow();
@@ -661,6 +729,14 @@ class DemographicExport implements FromCollection, WithTitle, WithHeadings, With
                             'borderStyle' => Border::BORDER_THIN,
                             'color' => ['rgb' => '000000'],
                         ],
+                    ],
+                    'font' => [
+                        'name' => 'Century Gothic',
+                        'size' => 10,
+                    ],
+                    'alignment' => [
+                        'horizontal' => Alignment::HORIZONTAL_CENTER,
+                        'vertical'   => Alignment::VERTICAL_CENTER,
                     ],
                 ]);
             }
@@ -701,6 +777,4 @@ class DemographicExport implements FromCollection, WithTitle, WithHeadings, With
             'F' => 15,
         ];
     }
-
-
 }

@@ -31,7 +31,7 @@ class FormController extends Controller
 
         $Form = Form::where('id', $id)->get();
 
-        if($Form->isEmpty()){
+        if ($Form->isEmpty()) {
             return $this->responseUnprocessable('', 'Invalid ID');
         }
 
@@ -90,6 +90,12 @@ class FormController extends Controller
         if (TargetLocation::where('form_id', $id)->exists()) {
             return $this->responseUnprocessable('', 'Unable to Archive, Form already in used!');
         }
+
+
+        if (TargetLocation::where('form_id', $id)->exists()) {
+            return $this->responseUnprocessable('', 'Unable to Archive, Form already in used!');
+        }
+
 
         if (!$form->deleted_at) {
 

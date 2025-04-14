@@ -29,7 +29,10 @@ return new class extends Migration
             $table->integer('response_limit');
             $table->unsignedInteger("form_id")->index()->nullable();
             $table->unsignedInteger("form_history_id")->index()->nullable();
-            $table->boolean('is_done');
+            $table->unsignedInteger("vehicle_counted_by_user_id")->index();
+            $table->unsignedInteger("foot_counted_by_user_id")->index();
+            $table->boolean('is_done')->default(false);
+            $table->boolean('is_final')->default(false);
 
             $table->foreign("form_id")
                 ->references("id")
@@ -37,9 +40,20 @@ return new class extends Migration
                 ->onDelete("cascade");
 
             $table->foreign("form_history_id")
-            ->references("id")
-            ->on("form_histories")
-            ->onDelete("cascade");
+                ->references("id")
+                ->on("form_histories")
+                ->onDelete("cascade");
+
+            // relationship on users
+            $table->foreign("vehicle_counted_by_user_id")
+                ->references("id")
+                ->on("users");
+
+
+            $table->foreign("foot_counted_by_user_id")
+                ->references("id")
+                ->on("users");
+
 
             $table->timestamps();
             $table->softDeletes();

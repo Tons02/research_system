@@ -30,6 +30,7 @@ class QuestionAnswerController extends Controller
                 'question_answers.answer',
                 DB::raw('COUNT(question_answers.id) as answer_count')
             )
+            ->where('question_answers.income_class', 'Class AB')
             ->whereBetween('question_answers.updated_at', [$from_date, $to_date])
             ->when($target_location, function ($query) use ($target_location) {
                 return $query->where('survey_answers.target_location_id', $target_location);

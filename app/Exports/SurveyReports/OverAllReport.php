@@ -19,7 +19,9 @@ class OverAllReport implements WithMultipleSheets
     {
         return [
             new DemographicExport($this->target_location_id),
-            new FootCountAverageExport($this->target_location_id),
+            new ResponseClassAB($this->target_location_id),
+            new ResponseClassC($this->target_location_id),
+            new ResponseClassDE($this->target_location_id),
         ];
     }
 }

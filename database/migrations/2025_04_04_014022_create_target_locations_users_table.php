@@ -19,16 +19,17 @@ return new class extends Migration
             $table->boolean("is_done");
 
             $table->foreign('target_location_id')
-                  ->references('id')
-                  ->on('target_locations')
-                  ->onDelete('cascade');
+                ->references('id')
+                ->on('target_locations')
+                ->onDelete('cascade');
 
             $table->foreign('user_id')
-                  ->references('id')
-                  ->on('users')
-                  ->onDelete('cascade');
+                ->references('id')
+                ->on('users')
+                ->onDelete('cascade');
 
             $table->timestamps();
+            $table->softDeletes();
         });
     }
 

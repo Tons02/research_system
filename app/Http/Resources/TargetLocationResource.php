@@ -36,19 +36,22 @@ class TargetLocationResource extends JsonResource
             'street' => $this->street,
             'bound_box' => $this->bound_box,
             'response_limit' => $this->response_limit,
-            'form_history_id' => $this->form_id,
+            'form_history_id' => $this->form_history_id,
             'form_history_id' => [
-                    'id' => $this->form->id,
-                    'title' => $this->form->title,
-                    'description' => $this->form->description,
-                    'sections' => $this->form->sections,
-                    ],
-            'form' => [
+                'id' => $this->form_histories->id,
+                'title' => $this->form_histories->title,
+                'description' => $this->form_histories->description,
+                'sections' => $this->form_histories->sections,
+            ],
+
+            'form' => $this->form,
+            'form' => $this->form ? [
                 'id' => $this->form->id,
                 'title' => $this->form->title,
                 'description' => $this->form->description,
                 'sections' => $this->form->sections,
-                ],
+            ] : null,
+
             'surveyors' => $this->target_locations_users->map(function ($surveyor) {
                 return [
                     'id' => $surveyor->id,
@@ -60,6 +63,22 @@ class TargetLocationResource extends JsonResource
                     'response_limit' => $surveyor->pivot->response_limit,
                 ];
             }),
+            'vehicle_counted_by' => [
+                'id' => $this->vehicle_counted_by_user->id,
+                'first_name' => $this->vehicle_counted_by_user->first_name,
+                'middle_name' => $this->vehicle_counted_by_user->middle_name,
+                'last_name' => $this->vehicle_counted_by_user->last_name,
+                'username' => $this->vehicle_counted_by_user->username,
+            ],
+            'foot_counted_by' => [
+                'id' => $this->foot_counted_by_user->id,
+                'first_name' => $this->foot_counted_by_user->first_name,
+                'middle_name' => $this->foot_counted_by_user->middle_name,
+                'last_name' => $this->foot_counted_by_user->last_name,
+                'username' => $this->foot_counted_by_user->username,
+            ],
+            'is_final' => $this->is_final,
+            'is_done' => $this->is_done,
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
             'deleted_at' => $this->deleted_at

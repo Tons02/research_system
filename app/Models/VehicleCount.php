@@ -18,6 +18,8 @@ class VehicleCount extends Model
         'total_left',
         'total_right',
         'grand_total',
+        'surveyor_id',
+        'surveyor_id',
     ];
 
     protected $hidden = [
@@ -37,5 +39,10 @@ class VehicleCount extends Model
             "id",
             "id"
         );
+    }
+
+    public function surveyor_id()
+    {
+        return $this->belongsTo(User::class, 'surveyor_id')->withTrashed();
     }
 }

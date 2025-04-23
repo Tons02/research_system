@@ -22,7 +22,7 @@ class SurveyAnswerRequest extends FormRequest
     public function rules(): array
     {
         return [
-            "target_location_id" => ["required","exists:target_locations,id"],
+            "target_location_id" => ["required", "exists:target_locations,id"],
             "family_size" => [
                 "required",
                 "integer"
@@ -48,6 +48,18 @@ class SurveyAnswerRequest extends FormRequest
             "date" => [
                 "required",
                 "date",
+            ],
+            "monthly_utility_expenses" => [
+                "required",
+            ],
+            "educational_attainment" => [
+                "required",
+            ],
+            "occupation" => [
+                "required",
+            ],
+            "structure_of_house" => [
+                "required",
             ],
             "questionnaire_answer" => [
                 "required",

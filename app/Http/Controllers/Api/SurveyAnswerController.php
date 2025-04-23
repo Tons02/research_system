@@ -24,10 +24,15 @@ class SurveyAnswerController extends Controller
     {
         $status = $request->query('status');
         $pagination = $request->query('pagination');
+        $from_date = $request->query('from_date');
+        $to_date = $request->query('to_date');
 
         $SurveyAnswer = SurveyAnswer::when($status === "inactive", function ($query) {
             $query->onlyTrashed();
         })
+            ->when($from_date != null && $to_date != null, function ($query) use ($from_date, $to_date) {
+                return $query->whereBetween('created_at', [$from_date, $to_date]);
+            })
             ->orderBy('created_at', 'desc')
             ->useFilters()
             ->dynamicPaginate();
@@ -42,34 +47,59 @@ class SurveyAnswerController extends Controller
 
     public function store(SurveyAnswerRequest $request)
     {
-        $user = auth('sanctum')->user()->load('target_locations_users');
+        $user = auth('sanctum')->user();
 
-        // Step 1: Filter locations where is_done == 0 and map with target_location_id and response_limit
-        $allowedLocations = $user->target_locations_users
-            ->filter(function ($item) {
-                return $item->pivot->is_done == 0;
-            })
-            ->mapWithKeys(function ($item) {
-                return [
-                    $item->pivot->target_location_id => $item->pivot->response_limit
-                ];
-            });
+        // Check if user has access to the location (either active or historical)
+        $activeLocation = $user->loadMissing('target_locations_users')
+            ->target_locations_users
+            ->firstWhere('id', $request["target_location_id"]);
 
-        // Step 2: Check if the requested location is allowed
-        if (!$allowedLocations->has($request["target_location_id"])) {
+        $historicalLocation = $user->loadMissing('target_locations_users_history')
+            ->target_locations_users_history
+            ->firstWhere('id', $request["target_location_id"]);
+
+        // Access validation
+        if (! $activeLocation && ! $historicalLocation) {
             return $this->responseUnprocessable('', 'You cannot take survey on this location, only on your tagged location.');
         }
 
-        // Step 3: Get the response limit for this location
-        $response_limit = $allowedLocations[$request["target_location_id"]];
+        // Prioritize historical record if it exists, otherwise use active
+        $location = $historicalLocation ?: $activeLocation;
 
-        // Step 4: Count how many surveys the user has already submitted
+        // Finalization check
+        if (! $location->is_final) {
+            return $this->responseUnprocessable('', 'You cannot take the survey because it is not finalized. Please contact your supervisor or support.');
+        }
+
+        // Count how many surveys the user has already submitted
         $total_survey_of_surveyor = SurveyAnswer::where('target_location_id', $request["target_location_id"])
             ->where('surveyor_id', $user->id)
             ->count();
 
-        // Step 5: Compare
-        if ($total_survey_of_surveyor >= $response_limit) {
+        // Response limit validation
+        $pivotLimit = optional($location->pivot)->response_limit;
+        $locationLimit = $location->response_limit;
+
+        // Optional: Auto-mark as done if limit hit and pivot exists
+        if ($pivotLimit === $locationLimit && $locationLimit >= $total_survey_of_surveyor) {
+            $target_location = TargetLocation::find($location->id);
+
+            if (! $target_location) {
+                return $this->responseUnprocessable('', 'Invalid ID provided. Please check the ID and try again.');
+            }
+
+            $target_location->update(['is_done' => 1]);
+
+            return $this->responseUnprocessable('', 'Survey is done');
+        }
+
+
+        if ($total_survey_of_surveyor >= $locationLimit) {
+            return $this->responseUnprocessable('', 'Survey is done');
+        }
+
+        // If user exceeded either limit, stop them
+        if ($pivotLimit !== null && $total_survey_of_surveyor >= $pivotLimit) {
             return $this->responseUnprocessable('', 'You cannot create more surveys than you are tagged for.');
         }
 
@@ -150,12 +180,11 @@ class SurveyAnswerController extends Controller
                 }
             }
 
-
             $total_survey_of_surveyor_after_creating = SurveyAnswer::where('target_location_id', $request["target_location_id"])
                 ->where('surveyor_id', $user->id)
                 ->count();
 
-            if ($total_survey_of_surveyor_after_creating === $response_limit) {
+            if ($total_survey_of_surveyor_after_creating === $pivotLimit) {
                 // Find the target location pivot record
                 $user->target_locations_users()
                     ->updateExistingPivot($request["target_location_id"], [
@@ -163,6 +192,22 @@ class SurveyAnswerController extends Controller
                     ]);
             }
 
+            // For closing the survey
+            $total_survey_on_location = SurveyAnswer::where('target_location_id', $request["target_location_id"])
+                ->count();
+
+            // Step 2: Check if response limit has been reached globally
+            if ($total_survey_on_location >= $location->response_limit) {
+                $target_location = TargetLocation::find($location->id);
+
+                if (! $target_location) {
+                    return $this->responseUnprocessable('', 'Invalid ID provided. Please check the ID and try again.');
+                }
+
+                $target_location->update(['is_done' => 1]);
+
+                return $this->responseUnprocessable('', 'Survey is done');
+            }
 
             DB::commit();
             return $this->responseCreated('Survey Answer Successfully Synced', $create_survey_answer);
@@ -195,6 +240,6 @@ class SurveyAnswerController extends Controller
             return $this->responseUnprocessable('', 'No Available Reports.');
         }
 
-        return Excel::download(new OverAllReport($target_location_id), $target_location . ' Survey Answers.xlsx');
+        return Excel::download(new OverAllReport($target_location_id), ' Survey Answers.xlsx');
     }
 }

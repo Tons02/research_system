@@ -26,8 +26,9 @@ class VehicleCountRequest extends FormRequest
     public function rules(): array
     {
         return [
-                "date" => [
+            "date" => [
                 "required",
+                "sometimes",
                 "date",
                 "before_or_equal:" . now()->toDateString(),
                 function ($attribute, $value, $fail) {
@@ -46,8 +47,8 @@ class VehicleCountRequest extends FormRequest
                         ->select('vehicle_counts.time')
                         ->get();
 
-                    $amExists = $existingEntries->contains(fn ($entry) => Carbon::parse($entry->time)->format('A') === 'AM');
-                    $pmExists = $existingEntries->contains(fn ($entry) => Carbon::parse($entry->time)->format('A') === 'PM');
+                    $amExists = $existingEntries->contains(fn($entry) => Carbon::parse($entry->time)->format('A') === 'AM');
+                    $pmExists = $existingEntries->contains(fn($entry) => Carbon::parse($entry->time)->format('A') === 'PM');
 
                     $currentTime = request('time') ? Carbon::parse(request('time'))->format('A') : null;
 
@@ -59,21 +60,31 @@ class VehicleCountRequest extends FormRequest
                     if (($amExists && $currentTime === 'AM') || ($pmExists && $currentTime === 'PM')) {
                         $fail("Only one AM and one PM entry are allowed per day for this target location.");
                     }
-
                 }
             ],
-           "time" => [
+            "time" => [
                 "required",
+                "sometimes",
                 "date_format:H:i:s",
                 "regex:/^(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d$/"
-           ],
-            "total_left" => "required|integer",
-            "total_right" => "required|integer",
-            "target_location_id" => ["required", "exists:target_locations,id"],
+            ],
+            "total_left" => [
+                "required",
+                "sometimes",
+                "integer"
+            ],
+            "total_right" =>  [
+                "required",
+                "sometimes",
+                "integer"
+            ],
+            "surveyor_id" => ["required", "sometimes", "exists:users,id"],
+            "target_location_id" => ["required", "sometimes", "exists:target_locations,id"],
         ];
     }
 
-    public function messages(){
+    public function messages()
+    {
         return [
             'time.date_format' => "The time field must match the format 00:00:00",
         ];

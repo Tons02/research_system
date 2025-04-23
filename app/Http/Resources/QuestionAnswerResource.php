@@ -16,11 +16,6 @@ class QuestionAnswerResource extends JsonResource
     {
         return [
             'survey_id' => $this->survey_id,
-            // 'name' => $this->survey ? [
-            //     'id' => $this->survey->id,
-            //     'name' => $this->survey->id,
-            // ] : 'deleted survey',
-            // 'store' => $this->survey->store->name,
             'question' => $this->question,
             'answer' => $this->answer,
         ];

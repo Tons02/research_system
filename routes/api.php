@@ -72,12 +72,13 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::put('form-archived/{id}', [FormController::class, 'archived'])->middleware(['abilities:form-management:crud']);
     Route::resource("forms", FormController::class)->middleware(['abilities:form-management:crud']);
 
-     //Form Controller
-     Route::put('form-history-archived/{id}', [FormHistoriesController::class, 'archived'])->middleware(['abilities:form-management:crud']);
-     Route::resource("forms-history", FormHistoriesController::class)->middleware(['abilities:form-management:crud']);
+    //Form Controller
+    Route::put('form-history-archived/{id}', [FormHistoriesController::class, 'archived'])->middleware(['abilities:form-management:crud']);
+    Route::resource("forms-history", FormHistoriesController::class)->middleware(['abilities:form-management:crud']);
 
     //Locations Controller
     Route::put('target-location-archived/{id}', [TargetLocationController::class, 'archived'])->middleware(['abilities:target-locations:crud']);
+    Route::patch('target-location-finalized/{id}', [TargetLocationController::class, 'finalized'])->middleware(['abilities:target-locations:crud']);
     Route::resource("target-locations", TargetLocationController::class)->middleware(['abilities:target-locations:crud']);
 
     // auth controller
@@ -102,5 +103,4 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::put('foot-count-archived/{id}', [FootCountController::class, 'archived'])->middleware(['abilities:survey-answer:crud']);
     Route::get('foot-count-export', [FootCountController::class, 'export'])->middleware(['abilities:survey-answer:crud']);
     Route::resource("foot-counts", FootCountController::class)->middleware(['abilities:survey-answer:crud']);
-
 });

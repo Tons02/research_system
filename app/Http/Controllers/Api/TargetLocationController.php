@@ -79,8 +79,12 @@ class TargetLocationController extends Controller
                     'Philippines'
                 ]))) ?? [],
                 "response_limit" => $request["response_limit"],
+                "form_id" => $request["form_id"],
                 "form_history_id" => $create_form_history->id,
+                "vehicle_counted_by_user_id" => $request["vehicle_counted_by_user_id"],
+                "foot_counted_by_user_id" => $request["foot_counted_by_user_id"],
                 "is_done" => 0,
+                "is_final" => 0,
             ]);
 
             // Attach surveyors to the target location (using the pivot table with additional attributes)
@@ -90,7 +94,6 @@ class TargetLocationController extends Controller
                     ['response_limit' => $surveyor['response_limit']],
                 );
             }
-
             DB::commit();
             return $this->responseCreated('Form Successfully Created', $create_target_location);
         } catch (\Exception $e) {
@@ -106,11 +109,28 @@ class TargetLocationController extends Controller
 
         try {
 
-            $target_location = TargetLocation::find($id); // Correct variable assignment
+            $target_location = TargetLocation::find($id);
 
             if (!$target_location) {
                 return $this->responseUnprocessable('', 'Invalid ID provided for updating. Please check the ID and try again.');
             }
+
+            if ($target_location->is_final) {
+                return $this->responseUnprocessable('', 'This target location is finalized and can no longer be edited.');
+            }
+
+            $form = Form::find($request['form_id']);
+
+            $form_history = FormHistories::find($request['form_history_id']);
+
+            $form_history->update([
+                'title' => $form->title,
+                'description' => $form->description,
+                'sections' => $form->sections,
+            ]);
+
+
+            $formHistoryUpdated = $form_history->wasChanged();
 
             // Update the target location details
             $target_location->region_psgc_id = $request['region_psgc_id'];
@@ -124,7 +144,10 @@ class TargetLocationController extends Controller
             $target_location->barangay_psgc_id = $request['barangay_psgc_id'];
             $target_location->barangay = $request['barangay'];
             $target_location->street = $request['street'];
+            $target_location->form_id = $request['form_id'];
             $target_location->response_limit = $request['response_limit'];
+            $target_location->vehicle_counted_by_user_id = $request['vehicle_counted_by_user_id'];
+            $target_location->foot_counted_by_user_id = $request['foot_counted_by_user_id'];
             $target_location->bound_box = $this->getBoundBox(implode(', ', array_filter([
                 $request["barangay"],
                 $request["city_municipality"],
@@ -161,7 +184,7 @@ class TargetLocationController extends Controller
 
 
             // If there were no changes at all
-            if (!$targetLocationUpdated && !$pivotChanged) {
+            if (!$targetLocationUpdated && !$pivotChanged && !$formHistoryUpdated) {
                 return $this->responseSuccess('No Changes', $target_location);
             }
 
@@ -215,6 +238,22 @@ class TargetLocationController extends Controller
                 return $this->responseServerError('Network Error Please Try Again');
             }
         }
+    }
+
+    public function finalized(TargetLocationRequest $request, $id)
+    {
+        $target_location = TargetLocation::find($id);
+
+        if (!$target_location) {
+            return $this->responseUnprocessable('', 'Invalid ID provided for finalizing. Please check the ID and try again.');
+        }
+
+        $target_location->update([
+            'form_id' => null,
+            'is_final' => $request["is_final"],
+        ]);
+
+        return $this->responseSuccess('Target Location successfully finalized', $target_location);
     }
 
     protected function getBoundBox($location)

@@ -23,24 +23,31 @@ class VehicleCountController extends Controller
         $status = $request->query('status');
         $target_location_id = $request->query('target_location_id');
 
-        $VehicleCount = VehicleCount::with('target_locations')
-        ->when($status === "inactive", function ($query) {
-            $query->onlyTrashed();
-        })
-        ->when(!is_null($target_location_id), function ($query) use ($target_location_id) {
-            $query->whereHas('target_locations', function ($query) use ($target_location_id) {
-                $query->where('target_location_id', $target_location_id);
-            });
-        })
-        ->orderBy('created_at', 'desc')
-        ->useFilters()
-        ->dynamicPaginate();
+        $VehicleCount = VehicleCount::with(['target_locations', 'surveyor_id'])
+            ->when($status === "inactive", function ($query) {
+                $query->onlyTrashed();
+            })
+            ->when(!is_null($target_location_id), function ($query) use ($target_location_id) {
+                $query->whereHas('target_locations', function ($query) use ($target_location_id) {
+                    $query->where('target_location_id', $target_location_id);
+                });
+            })
+            ->orderBy('created_at', 'desc')
+            ->useFilters()
+            ->dynamicPaginate();
 
         return $this->responseSuccess('Vehicle Count display successfully', $VehicleCount);
     }
 
     public function store(VehicleCountRequest $request)
     {
+        $user = auth('sanctum')->user()->load('vehicle_counted');
+
+
+        if ($user->vehicle_counted->isEmpty() || !$user->vehicle_counted[0]->vehicle_counted_by_user_id === $user->id) {
+            return $this->responseUnprocessable('', 'You cannot insert vehicle counts because it is not tagged on your account. Please contact your supervisor or support.');
+        }
+
         $create_vehicle_count = VehicleCount::create([
             "date" => $request->date,
             "time" => $request->time,
@@ -48,6 +55,7 @@ class VehicleCountController extends Controller
             "total_left" => $request->total_left,
             "total_right" => $request->total_right,
             "grand_total" => $request->total_left +  $request->total_right,
+            "surveyor_id" => $user->id,
         ]);
 
         if ($request->target_location_id) {
@@ -106,6 +114,4 @@ class VehicleCountController extends Controller
 
         return Excel::download(new TrafficCountExport($target_locations), 'Vehicle Counts.xlsx');
     }
-
-
 }

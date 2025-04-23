@@ -19,8 +19,13 @@ return new class extends Migration
             $table->integer('total_left');
             $table->integer('total_right');
             $table->integer('grand_total');
+            $table->unsignedInteger("surveyor_id")->index();
             $table->timestamps();
             $table->softDeletes();
+
+            $table->foreign("surveyor_id")
+                ->references("id")
+                ->on("users");
         });
     }
 

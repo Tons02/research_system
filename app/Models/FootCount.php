@@ -18,6 +18,7 @@ class FootCount extends Model
         'total_male',
         'total_female',
         'grand_total',
+        'surveyor_id'
     ];
 
     protected $hidden = [
@@ -37,5 +38,10 @@ class FootCount extends Model
             "id",
             "id"
         );
+    }
+
+    public function surveyor_id()
+    {
+        return $this->belongsTo(User::class, 'surveyor_id')->withTrashed();
     }
 }

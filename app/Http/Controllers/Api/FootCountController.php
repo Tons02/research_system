@@ -18,27 +18,36 @@ class FootCountController extends Controller
 
     public function index(Request $request)
     {
+
         $status = $request->query('status');
         $target_location_id = $request->query('target_location_id');
 
-        $FootCount = FootCount::with('target_locations')
-        ->when($status === "inactive", function ($query) {
-            $query->onlyTrashed();
-        })
-        ->when(!is_null($target_location_id), function ($query) use ($target_location_id) {
-            $query->whereHas('target_locations', function ($query) use ($target_location_id) {
-                $query->where('target_location_id', $target_location_id);
-            });
-        })
-        ->orderBy('created_at', 'desc')
-        ->useFilters()
-        ->dynamicPaginate();
+        $FootCount = FootCount::with(['target_locations', 'surveyor_id'])
+            ->when($status === "inactive", function ($query) {
+                $query->onlyTrashed();
+            })
+            ->when(!is_null($target_location_id), function ($query) use ($target_location_id) {
+                $query->whereHas('target_locations', function ($query) use ($target_location_id) {
+                    $query->where('target_location_id', $target_location_id);
+                });
+            })
+            ->orderBy('created_at', 'desc')
+            ->useFilters()
+            ->dynamicPaginate();
 
         return $this->responseSuccess('Foot Count display successfully', $FootCount);
     }
 
     public function store(FootCountRequest $request)
     {
+        $user = auth('sanctum')->user()->load('foot_counted');
+
+
+        if ($user->foot_counted->isEmpty() || !$user->foot_counted[0]->foot_counted_by_user_id === $user->id) {
+            return $this->responseUnprocessable('', 'You cannot insert foot counts because it is not tagged on your account. Please contact your supervisor or support.');
+        }
+
+
         $create_foot_count = FootCount::create([
             "date" => $request->date,
             "time" => $request->time,
@@ -46,12 +55,12 @@ class FootCountController extends Controller
             "total_male" => $request->total_male,
             "total_female" => $request->total_female,
             "grand_total" => $request->total_male +  $request->total_female,
+            "surveyor_id" => $request->surveyor_id,
         ]);
 
         if ($request->target_location_id) {
             $create_foot_count->target_locations()->attach($request->target_location_id);
         }
-
 
         return $this->responseCreated('Foot Count Successfully Created', $create_foot_count);
     }
@@ -104,5 +113,4 @@ class FootCountController extends Controller
 
         return Excel::download(new TrafficFootCountExport($target_locations), 'Foot Counts.xlsx');
     }
-
 }

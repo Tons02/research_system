@@ -26,9 +26,9 @@ class LoginResource extends JsonResource
             'username' => $this->username,
             'role_id' => $this->role_id,
             'role' => $this->role,
-            'target_locations' => $this->target_locations_users->map(function ($surveyor) {
+            'target_locations' => optional($this->target_locations_users->first(), function ($surveyor) {
                 return [
-                    'id' => $surveyor->id,
+                    'target_location_id' => $surveyor->id,
                     'form_history' => $surveyor->form_history_id,
                     'target_location' => implode(', ', array_filter([
                         $surveyor->region,
@@ -41,6 +41,55 @@ class LoginResource extends JsonResource
                     'total_response_limit' => $surveyor->response_limit,
                     'user_limit' => optional($surveyor->pivot)->response_limit,
                     'is_done' => optional($surveyor->pivot)->is_done,
+                    'is_final' => $surveyor->is_final,
+                ];
+            }),
+            'target_locations_history' => $this->target_locations_users_history->map(function ($surveyor) {
+                return [
+                    'target_location_id' => $surveyor->id,
+                    'form_history' => $surveyor->form_history_id,
+                    'target_location' => implode(', ', array_filter([
+                        $surveyor->region,
+                        $surveyor->province,
+                        $surveyor->city_municipality,
+                        $surveyor->sub_municipality,
+                        $surveyor->barangay
+                    ])),
+                    'bound_box' => $surveyor->bound_box,
+                    'total_response_limit' => $surveyor->response_limit,
+                    'user_limit' => optional($surveyor->pivot)->response_limit,
+                    'is_done' => optional($surveyor->pivot)->is_done,
+                    'is_final' => $surveyor->is_final,
+                ];
+            }),
+            'vehicle_counted_by' => optional($this->vehicle_counted->first(), function ($vehicle_counted) {
+                return [
+                    'target_location_id' => $vehicle_counted->id,
+                    'form_history' => $vehicle_counted->form_history_id,
+                    'target_location' => implode(', ', array_filter([
+                        $vehicle_counted->region,
+                        $vehicle_counted->province,
+                        $vehicle_counted->city_municipality,
+                        $vehicle_counted->sub_municipality,
+                        $vehicle_counted->barangay,
+                    ])),
+                    'is_final' => $vehicle_counted->is_final,
+                    'is_done' => $vehicle_counted->is_done,
+                ];
+            }),
+            'foot_counted_by' => optional($this->foot_counted->first(), function ($foot_counted) {
+                return [
+                    'target_location_id' => $foot_counted->id,
+                    'form_history' => $foot_counted->form_history_id,
+                    'target_location' => implode(', ', array_filter([
+                        $foot_counted->region,
+                        $foot_counted->province,
+                        $foot_counted->city_municipality,
+                        $foot_counted->sub_municipality,
+                        $foot_counted->barangay,
+                    ])),
+                    'is_final' => $foot_counted->is_final,
+                    'is_done' => $foot_counted->is_done,
                 ];
             }),
         ];

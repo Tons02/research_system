@@ -6,6 +6,7 @@ use App\Exports\SurveyReports\DemographicExport;
 use App\Exports\SurveyReports\OverAllReport;
 use App\Exports\SurveyReports\ResponseClassAB;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\OverAllRequest;
 use App\Http\Requests\SurveyAnswerRequest;
 use App\Http\Resources\SurveyAnswerResource;
 use App\Models\QuestionAnswer;
@@ -217,9 +218,13 @@ class SurveyAnswerController extends Controller
         }
     }
 
-    public function export(Request $request)
+    public function export(OverAllRequest $request)
     {
         $target_location_id = $request->query('target_location_id');
+        $surveyor_id = $request->query('surveyor_id');
+        $from_date = $request->query('from_date');
+        $to_date = $request->query('to_date');
+        $status = $request->query('status');
 
         $location_name = TargetLocation::find($target_location_id);
 
@@ -240,6 +245,6 @@ class SurveyAnswerController extends Controller
             return $this->responseUnprocessable('', 'No Available Reports.');
         }
 
-        return Excel::download(new OverAllReport($target_location_id), ' Survey Answers.xlsx');
+        return Excel::download(new OverAllReport($target_location_id, $surveyor_id, $from_date, $to_date, $status), $target_location . ' Survey Answers.xlsx');
     }
 }

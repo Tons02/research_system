@@ -17,11 +17,15 @@ use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
 class ResponseClassAB implements FromCollection, WithMapping, WithHeadings, WithTitle, WithEvents, WithStyles
 {
-    protected $target_location_id;
+    protected $target_location_id, $surveyor_id, $from_date, $to_date, $status;
 
-    public function __construct($target_location_id)
+    public function __construct($target_location_id, $surveyor_id, $from_date, $to_date, $status)
     {
         $this->target_location_id = $target_location_id;
+        $this->surveyor_id = $surveyor_id;
+        $this->from_date = $from_date;
+        $this->to_date = $to_date;
+        $this->status = $status;
     }
 
     public function collection()
@@ -41,6 +45,12 @@ class ResponseClassAB implements FromCollection, WithMapping, WithHeadings, With
             ->where('question_answers.income_class', 'Class AB')
             ->when($target_location_id, function ($query) use ($target_location_id) {
                 return $query->where('survey_answers.target_location_id', $target_location_id);
+            })
+            ->when($this->surveyor_id, function ($query) {
+                $query->where('survey_answers.surveyor_id', $this->surveyor_id);
+            })
+            ->when($this->from_date && $this->to_date, function ($query) {
+                $query->whereBetween('survey_answers.created_at', [$this->from_date, $this->to_date]);
             })
             ->groupBy(
                 'question_answers.section',

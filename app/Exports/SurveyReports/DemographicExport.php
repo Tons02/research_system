@@ -3,6 +3,7 @@
 namespace App\Exports\SurveyReports;
 
 use App\Models\SurveyAnswer;
+use Essa\APIToolKit\Api\ApiResponse;
 use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithColumnFormatting;
@@ -22,15 +23,27 @@ use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
 class DemographicExport implements FromCollection, WithTitle, WithHeadings, WithColumnWidths, WithDefaultStyles, WithStyles, WithMapping, WithEvents, WithColumnFormatting
 {
+    use ApiResponse;
 
-    protected $target_location_id, $sub_income_class_data, $income_class, $class_counts, $education_data, $employment, $occupation_of_employed;
+    protected $target_location_id, $sub_income_class_data, $income_class, $class_counts, $education_data, $employment, $occupation_of_employed, $surveyor_id, $from_date, $to_date, $status;
 
-    public function __construct($target_location_id)
+    public function __construct($target_location_id, $surveyor_id, $from_date, $to_date, $status)
     {
         $this->target_location_id = $target_location_id;
+        $this->surveyor_id = $surveyor_id;
+        $this->from_date = $from_date;
+        $this->to_date = $to_date;
+        $this->status = $status;
+
         // Total count for 'Class C'
         $totalClassC = SurveyAnswer::where('target_location_id', $target_location_id)
             ->where('income_class', 'Class C')
+            ->when($this->surveyor_id, function ($query) {
+                $query->where('surveyor_id', $this->surveyor_id);
+            })
+            ->when($this->from_date && $this->to_date, function ($query) {
+                $query->whereBetween('created_at', [$this->from_date, $this->to_date]);
+            })
             ->count();
 
         // If total is 0, prevent division by zero
@@ -45,6 +58,12 @@ class DemographicExport implements FromCollection, WithTitle, WithHeadings, With
                 COUNT(*) as count")
             ->where('target_location_id', $target_location_id)
             ->where('income_class', 'Class C')
+            ->when($this->surveyor_id, function ($query) {
+                $query->where('surveyor_id', $this->surveyor_id);
+            })
+            ->when($this->from_date && $this->to_date, function ($query) {
+                $query->whereBetween('created_at', [$this->from_date, $this->to_date]);
+            })
             ->groupBy('sub_income_class')
             ->get();
 
@@ -95,6 +114,12 @@ class DemographicExport implements FromCollection, WithTitle, WithHeadings, With
         // class C query
         $this->class_counts = SurveyAnswer::where('target_location_id', $target_location_id)
             ->distinct('income_class')
+            ->when($this->surveyor_id, function ($query) {
+                $query->where('surveyor_id', $this->surveyor_id);
+            })
+            ->when($this->from_date && $this->to_date, function ($query) {
+                $query->whereBetween('created_at', [$this->from_date, $this->to_date]);
+            })
             ->count();
 
 
@@ -106,6 +131,12 @@ class DemographicExport implements FromCollection, WithTitle, WithHeadings, With
         $incomeClasses = DB::table('survey_answers')
             ->select('income_class')
             ->where('target_location_id', $target_location_id)
+            ->when($this->surveyor_id, function ($query) {
+                $query->where('surveyor_id', $this->surveyor_id);
+            })
+            ->when($this->from_date && $this->to_date, function ($query) {
+                $query->whereBetween('created_at', [$this->from_date, $this->to_date]);
+            })
             ->whereNotNull('income_class')
             ->distinct()
             ->pluck('income_class')
@@ -118,6 +149,12 @@ class DemographicExport implements FromCollection, WithTitle, WithHeadings, With
         $records = DB::table('survey_answers')
             ->select('educational_attainment', 'income_class')
             ->where('target_location_id', $target_location_id)
+            ->when($this->surveyor_id, function ($query) {
+                $query->where('surveyor_id', $this->surveyor_id);
+            })
+            ->when($this->from_date && $this->to_date, function ($query) {
+                $query->whereBetween('created_at', [$this->from_date, $this->to_date]);
+            })
             ->get();
 
         // Initialize totals for all classes (including zeros)
@@ -184,14 +221,39 @@ class DemographicExport implements FromCollection, WithTitle, WithHeadings, With
         // First get the counts for each income class
         $classABTotal = SurveyAnswer::where('income_class', 'CLASS AB')
             ->where('target_location_id', $target_location_id)
+            ->when($this->surveyor_id, function ($query) {
+                $query->where('surveyor_id', $this->surveyor_id);
+            })
+            ->when($this->from_date && $this->to_date, function ($query) {
+                $query->whereBetween('created_at', [$this->from_date, $this->to_date]);
+            })
             ->count();
         $classCTotal = SurveyAnswer::where('income_class', 'CLASS C')
             ->where('target_location_id', $target_location_id)
+            ->when($this->surveyor_id, function ($query) {
+                $query->where('surveyor_id', $this->surveyor_id);
+            })
+            ->when($this->from_date && $this->to_date, function ($query) {
+                $query->whereBetween('created_at', [$this->from_date, $this->to_date]);
+            })
             ->count();
         $classDETotal = SurveyAnswer::where('income_class', 'CLASS DE')
             ->where('target_location_id', $target_location_id)
+            ->when($this->surveyor_id, function ($query) {
+                $query->where('surveyor_id', $this->surveyor_id);
+            })
+            ->when($this->from_date && $this->to_date, function ($query) {
+                $query->whereBetween('created_at', [$this->from_date, $this->to_date]);
+            })
             ->count();
+
         $overallTotal = SurveyAnswer::where('target_location_id', $target_location_id)
+            ->when($this->surveyor_id, function ($query) {
+                $query->where('surveyor_id', $this->surveyor_id);
+            })
+            ->when($this->from_date && $this->to_date, function ($query) {
+                $query->whereBetween('created_at', [$this->from_date, $this->to_date]);
+            })
             ->count();
 
 
@@ -202,20 +264,44 @@ class DemographicExport implements FromCollection, WithTitle, WithHeadings, With
             $classABCount = SurveyAnswer::where('income_class', 'CLASS AB')
                 ->where('employment_status', $status)
                 ->where('target_location_id', $target_location_id)
+                ->when($this->surveyor_id, function ($query) {
+                    $query->where('surveyor_id', $this->surveyor_id);
+                })
+                ->when($this->from_date && $this->to_date, function ($query) {
+                    $query->whereBetween('created_at', [$this->from_date, $this->to_date]);
+                })
                 ->count();
 
             $classCCount = SurveyAnswer::where('income_class', 'CLASS C')
                 ->where('employment_status', $status)
                 ->where('target_location_id', $target_location_id)
+                ->when($this->surveyor_id, function ($query) {
+                    $query->where('surveyor_id', $this->surveyor_id);
+                })
+                ->when($this->from_date && $this->to_date, function ($query) {
+                    $query->whereBetween('created_at', [$this->from_date, $this->to_date]);
+                })
                 ->count();
 
             $classDECount = SurveyAnswer::where('income_class', 'CLASS DE')
                 ->where('employment_status', $status)
                 ->where('target_location_id', $target_location_id)
+                ->when($this->surveyor_id, function ($query) {
+                    $query->where('surveyor_id', $this->surveyor_id);
+                })
+                ->when($this->from_date && $this->to_date, function ($query) {
+                    $query->whereBetween('created_at', [$this->from_date, $this->to_date]);
+                })
                 ->count();
 
             $totalCount = SurveyAnswer::where('employment_status', $status)
                 ->where('target_location_id', $target_location_id)
+                ->when($this->surveyor_id, function ($query) {
+                    $query->where('surveyor_id', $this->surveyor_id);
+                })
+                ->when($this->from_date && $this->to_date, function ($query) {
+                    $query->whereBetween('created_at', [$this->from_date, $this->to_date]);
+                })
                 ->count();
 
             return [
@@ -248,21 +334,56 @@ class DemographicExport implements FromCollection, WithTitle, WithHeadings, With
 
 
         // employed occupation
-        $results_employed_occupation = DB::select("
+        $bindings = [];
+        $subConditions = "employment_status = 'Employed' AND target_location_id = ?";
+        $bindings[] = $target_location_id;
+
+        if ($this->surveyor_id) {
+            $subConditions .= " AND surveyor_id = ?";
+            $bindings[] = $this->surveyor_id;
+        }
+
+        if ($this->from_date && $this->to_date) {
+            $subConditions .= " AND created_at BETWEEN ? AND ?";
+            $bindings[] = $this->from_date;
+            $bindings[] = $this->to_date;
+        }
+
+        $sql = "
             SELECT
                 occupation,
                 COUNT(*) as count,
-                CONCAT(ROUND((COUNT(*) * 100.0 / (SELECT COUNT(*) FROM survey_answers WHERE employment_status = 'Employed' AND target_location_id = '$target_location_id')))) as percentage
+                CONCAT(ROUND((COUNT(*) * 100.0 / (
+                    SELECT COUNT(*)
+                    FROM survey_answers
+                    WHERE $subConditions
+                )))) as percentage
             FROM
                 survey_answers
             WHERE
                 employment_status = 'Employed'
-                AND target_location_id = '$target_location_id'
-            GROUP BY
-                occupation
-            ORDER BY
-                count DESC
-        ");
+                AND target_location_id = ?";
+
+        $bindings[] = $target_location_id;
+
+        if ($this->surveyor_id) {
+            $sql .= " AND surveyor_id = ?";
+            $bindings[] = $this->surveyor_id;
+        }
+
+        if ($this->from_date && $this->to_date) {
+            $sql .= " AND created_at BETWEEN ? AND ?";
+            $bindings[] = $this->from_date;
+            $bindings[] = $this->to_date;
+        }
+
+        $sql .= "
+            GROUP BY occupation
+            ORDER BY count DESC
+        ";
+
+        $results_employed_occupation = DB::select($sql, $bindings);
+
 
         // Calculate the total count and sum of percentages (should be ~100%)
         $total_count = 0;
@@ -293,6 +414,12 @@ class DemographicExport implements FromCollection, WithTitle, WithHeadings, With
 
         $data = SurveyAnswer::selectRaw("income_class, COUNT(*) as total, (COUNT(*) / $totalCount) * 100 as percentage")
             ->where('target_location_id', $target_location_id)
+            ->when($this->surveyor_id, function ($query) {
+                $query->where('surveyor_id', $this->surveyor_id);
+            })
+            ->when($this->from_date && $this->to_date, function ($query) {
+                $query->whereBetween('created_at', [$this->from_date, $this->to_date]);
+            })
             ->groupBy('income_class')
             ->orderBy('income_class', 'asc')
             ->get();

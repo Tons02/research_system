@@ -25,6 +25,7 @@ class OverAllReport implements WithMultipleSheets
             new ResponseClassAB($this->target_location_id, $this->surveyor_id, $this->from_date, $this->to_date, $this->status),
             new ResponseClassC($this->target_location_id, $this->surveyor_id, $this->from_date, $this->to_date, $this->status),
             new ResponseClassDE($this->target_location_id, $this->surveyor_id, $this->from_date, $this->to_date, $this->status),
+            new SurveyAnswerExport($this->target_location_id, $this->surveyor_id, $this->from_date, $this->to_date, $this->status),
         ];
     }
 }

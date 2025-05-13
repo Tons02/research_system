@@ -40,7 +40,7 @@ class FootCount extends Model
         );
     }
 
-    public function surveyor_id()
+    public function surveyor()
     {
         return $this->belongsTo(User::class, 'surveyor_id')->withTrashed();
     }

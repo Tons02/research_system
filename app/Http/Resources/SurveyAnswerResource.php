@@ -41,8 +41,9 @@ class SurveyAnswerResource extends JsonResource
             'educational_attainment' => $this->educational_attainment,
             'employment_status' => $this->employment_status,
             'occupation' => $this->occupation,
-            'structure_of_house' => $this->employment_status,
-            'ownership_of_house' => $this->occupation,
+            'structure_of_house' => $this->structure_of_house,
+            'ownership_of_house' => $this->ownership_of_house,
+            'house_rent' => $this->house_rent,
             'questionnaire_answer' => $this->questionnaire_answer,
             'surveyor' => [
                 'id' => $this->user->id,

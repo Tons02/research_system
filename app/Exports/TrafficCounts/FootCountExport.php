@@ -18,21 +18,21 @@ use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
 class FootCountExport implements FromCollection, WithHeadings, WithStyles, WithTitle, WithMapping, WithDefaultStyles, WithColumnWidths
 {
-    protected $target_locations;
+    protected $target_location_id;
 
-    public function __construct($target_locations)
+    public function __construct($target_location_id)
     {
-        $this->target_locations = $target_locations;
+        $this->target_location_id = $target_location_id;
     }
 
     public function collection()
     {
         return FootCount::with('target_locations')
-        ->whereHas('target_locations', function ($query) {
-            $query->where('target_location_id', $this->target_locations);
-        })
-        ->orderBy('id', 'asc')
-        ->get();
+            ->whereHas('target_locations', function ($query) {
+                $query->where('target_location_id', $this->target_location_id);
+            })
+            ->orderBy('date', 'asc')
+            ->get();
     }
 
     public function title(): string
@@ -64,7 +64,12 @@ class FootCountExport implements FromCollection, WithHeadings, WithStyles, WithT
             ["FOOT COUNT ON " . ($formattedLocation ?? 'NO AVAILABLE DATA')],
             [],
             [
-               'ID', 'DATE', 'TIME', 'FEMALE', 'MALE', 'GRAND TOTAL'
+                'ID',
+                'DATE',
+                'TIME',
+                'FEMALE',
+                'MALE',
+                'GRAND TOTAL'
             ]
         ];
     }
@@ -122,11 +127,11 @@ class FootCountExport implements FromCollection, WithHeadings, WithStyles, WithT
                     'size' => 11,
                 ],
                 'borders' => [
-                        'allBorders' => [
-                            'borderStyle' => Border::BORDER_THIN,
-                            'color' => ['rgb' => '000000'],
-                        ],
+                    'allBorders' => [
+                        'borderStyle' => Border::BORDER_THIN,
+                        'color' => ['rgb' => '000000'],
                     ],
+                ],
             ];
         }
         $highestRow = $sheet->getHighestRow();
@@ -175,5 +180,4 @@ class FootCountExport implements FromCollection, WithHeadings, WithStyles, WithT
             'F' => 15,
         ];
     }
-
 }

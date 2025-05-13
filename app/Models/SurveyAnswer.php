@@ -29,6 +29,7 @@ class SurveyAnswer extends Model
         'occupation',
         'structure_of_house',
         'ownership_of_house',
+        'house_rent',
         'questionnaire_answer',
         'surveyor_id'
     ];

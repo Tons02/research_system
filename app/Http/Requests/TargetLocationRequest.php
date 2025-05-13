@@ -29,6 +29,10 @@ class TargetLocationRequest extends FormRequest
             ->toArray();
 
         return [
+            "title" => [
+                "required",
+                "sometimes"
+            ],
             "region_psgc_id" => [
                 "required",
                 "sometimes"
@@ -97,7 +101,8 @@ class TargetLocationRequest extends FormRequest
                         ->exists();
 
                     if ($exists) {
-                        $fail("The user is already assigned to another incomplete target location.");
+                        // i want to show the name of surveyor on the error message
+                        $fail("The user in surveyors is already assigned to another incomplete target location.");
                     }
                 },
             ],
@@ -131,7 +136,7 @@ class TargetLocationRequest extends FormRequest
 
 
                     if ($exists) {
-                        $fail("The user is already assigned to a location that is not yet marked as done.");
+                        $fail("The user in vehicle count tracker is already assigned to a location that is not yet marked as done.");
                     }
                 },
             ],
@@ -166,12 +171,15 @@ class TargetLocationRequest extends FormRequest
                         ->exists();
 
                     if ($exists) {
-                        $fail("The user is already assigned to a location that is not yet marked as done.");
+                        $fail("The user in foot count tracker is already assigned to a location that is not yet marked as done.");
                     }
                 },
             ],
-
             "is_final" => [
+                "boolean",
+                "sometimes"
+            ],
+            "is_done" => [
                 "boolean",
                 "sometimes"
             ],

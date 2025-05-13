@@ -29,18 +29,18 @@ use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
 class FootCountAverageExport implements FromCollection, WithHeadings, WithStyles, WithTitle, WithMapping, WithDefaultStyles, WithColumnWidths, WithColumnFormatting, WithEvents
 {
-    protected $target_locations, $footCounts;
+    protected $target_location_id, $footCounts;
 
-    public function __construct($target_locations)
+    public function __construct($target_location_id)
     {
-        $this->target_locations = $target_locations;
+        $this->target_location_id = $target_location_id;
 
 
         // Fetch foot counts and filter by location using whereHas
         $data = DB::table('target_locations_foot_counts')
             ->join('foot_counts', 'target_locations_foot_counts.foot_count_id', '=', 'foot_counts.id')
             ->join('target_locations', 'target_locations_foot_counts.target_location_id', '=', 'target_locations.id')
-            ->where('target_locations_foot_counts.target_location_id', $this->target_locations)
+            ->where('target_locations_foot_counts.target_location_id', $this->target_location_id)
             ->orderBy('date', 'asc')
             ->get();
 
@@ -91,7 +91,6 @@ class FootCountAverageExport implements FromCollection, WithHeadings, WithStyles
 
         // Assign the result to the footCounts property
         $this->footCounts = $result;
-
     }
 
     public function collection()
@@ -111,7 +110,11 @@ class FootCountAverageExport implements FromCollection, WithHeadings, WithStyles
             ["FOOT COUNT AVERAGE ON " . ($this->collection()->first()['target_location'] ?? 'NO AVAILABLE DATA')],
             [],
             [
-               'DATE', 'DAY', 'TOTAL', 'FEMALE', 'MALE'
+                'DATE',
+                'DAY',
+                'TOTAL',
+                'AM',
+                'PM'
             ]
         ];
     }
@@ -168,11 +171,11 @@ class FootCountAverageExport implements FromCollection, WithHeadings, WithStyles
                     'size' => 11,
                 ],
                 'borders' => [
-                        'allBorders' => [
-                            'borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN,
-                            'color' => ['rgb' => '000000'],
-                        ],
+                    'allBorders' => [
+                        'borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN,
+                        'color' => ['rgb' => '000000'],
                     ],
+                ],
             ];
         }
         $highestRow = $sheet->getHighestRow();
@@ -269,7 +272,7 @@ class FootCountAverageExport implements FromCollection, WithHeadings, WithStyles
 
                 foreach ($columnsToSum as $column) {
                     // Set the formula for the average
-                    $sheet->setCellValue("{$column}{$lastRow}",'AVERAGE');
+                    $sheet->setCellValue("{$column}{$lastRow}", 'AVERAGE');
 
                     // Apply styling to the cell
                     $sheet->getStyle("{$column}{$lastRow}")->applyFromArray([

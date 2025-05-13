@@ -16,6 +16,7 @@ class TargetLocationResource extends JsonResource
     {
         return [
             'id' => $this->id,
+            'title' => $this->title,
             'target_location' => implode(', ', array_filter([
                 $this->region,
                 $this->province,
@@ -79,6 +80,8 @@ class TargetLocationResource extends JsonResource
             ],
             'is_final' => $this->is_final,
             'is_done' => $this->is_done,
+            'start_date' => $this->start_date,
+            'end_date' => $this->end_date,
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
             'deleted_at' => $this->deleted_at

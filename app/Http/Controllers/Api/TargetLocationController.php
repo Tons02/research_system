@@ -11,6 +11,7 @@ use App\Http\Requests\TargetLocationRequest;
 use App\Models\Form;
 use App\Models\FormHistories;
 use App\Models\SurveyAnswer;
+use App\Models\TargetLocationUsers;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Cache;
@@ -224,10 +225,35 @@ class TargetLocationController extends Controller
 
         if ($target_location->deleted_at) {
 
+            // Get all users associated (including soft-deleted pivot records)
+            $userIds = TargetLocationUsers::withTrashed()
+                ->where('target_location_id', $target_location->id)
+                ->pluck('user_id');
+
+            // Check if any of these users are already assigned to another target location (not this one),
+            // where is_done = 0 and not soft-deleted
+            $conflict = TargetLocationUsers::whereIn('user_id', $userIds)
+                ->where('target_location_id', '!=', $target_location->id)
+                ->where('is_done', 0)
+                ->whereNull('deleted_at')
+                ->exists();
+
+            if ($conflict) {
+                return $this->responseUnprocessable('', 'Unable to restore. Some users are already assigned to another active target location.');
+            }
+
             $target_location->restore();
 
-            return $this->responseSuccess('Target Location successfully restore', $target_location);
+            // Restore pivot records
+            foreach ($target_location->target_locations_users()->withTrashed()->get() as $user) {
+                if ($user->pivot->trashed()) {
+                    $user->pivot->restore();
+                }
+            }
+
+            return $this->responseSuccess('Target Location successfully restored', $target_location);
         }
+
 
         // need to put this one once the survey answer is already created
         if (SurveyAnswer::where('target_location_id', $id)->exists()) {
@@ -241,8 +267,12 @@ class TargetLocationController extends Controller
 
             try {
 
-                $target_location->target_locations_users()->detach();
+                // $target_location->target_locations_users()->detach(); // instead of  detach i want to use softdelete so that if i want to restore them i can just remove the soft delte
                 $target_location->delete();
+
+                foreach ($target_location->target_locations_users as $user) {
+                        $user->pivot->delete(); // soft deletes the pivot
+                    }
 
                 DB::commit();
                 return $this->responseSuccess('Target Location successfully archived', $target_location);

@@ -29,7 +29,8 @@ class LoginResource extends JsonResource
             'target_locations' => optional($this->target_locations_users->first(), function ($surveyor) {
                 return [
                     'target_location_id' => $surveyor->id,
-                    'form_history' => $surveyor->form_history_id,
+                    'title' => $surveyor->title,
+                    'form_history' => $surveyor->form_histories,
                     'target_location' => implode(', ', array_filter([
                         $surveyor->region,
                         $surveyor->province,

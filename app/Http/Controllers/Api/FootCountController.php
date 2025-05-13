@@ -6,7 +6,9 @@ use App\Exports\TrafficCounts\TrafficFootCountExport;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\FootCountRequest;
 use App\Http\Requests\VehicleCountExportRequest;
+use App\Http\Resources\FootCountResource;
 use App\Models\FootCount;
+use App\Models\TargetLocation;
 use Carbon\Carbon;
 use Essa\APIToolKit\Api\ApiResponse;
 use Illuminate\Http\Request;
@@ -21,32 +23,44 @@ class FootCountController extends Controller
 
         $status = $request->query('status');
         $target_location_id = $request->query('target_location_id');
+        $pagination = $request->query('pagination');
 
-        $FootCount = FootCount::with(['target_locations', 'surveyor_id'])
-            ->when($status === "inactive", function ($query) {
-                $query->onlyTrashed();
+        $FootCount = FootCount::when($status === "inactive", function ($query) {
+            $query->onlyTrashed();
+        })
+            ->whereHas('target_locations', function ($query) use ($target_location_id) {
+                $query->where('target_location_id', $target_location_id);
             })
-            ->when(!is_null($target_location_id), function ($query) use ($target_location_id) {
-                $query->whereHas('target_locations', function ($query) use ($target_location_id) {
-                    $query->where('target_location_id', $target_location_id);
-                });
-            })
-            ->orderBy('created_at', 'desc')
+            ->orderBy('date', 'desc')
             ->useFilters()
             ->dynamicPaginate();
 
+        if (!$pagination) {
+            FootCountResource::collection($FootCount);
+        } else {
+            $FootCount = FootCountResource::collection($FootCount);
+        }
         return $this->responseSuccess('Foot Count display successfully', $FootCount);
     }
 
     public function store(FootCountRequest $request)
     {
-        $user = auth('sanctum')->user()->load('foot_counted');
+        $user = auth('sanctum')->user();
 
+        $target_location = TargetLocation::find($request->target_location_id);
 
-        if ($user->foot_counted->isEmpty() || !$user->foot_counted[0]->foot_counted_by_user_id === $user->id) {
+        // check if the user is tag on the target location foot count
+        if ($target_location->foot_counted_by_user_id != $user->id) {
             return $this->responseUnprocessable('', 'You cannot insert foot counts because it is not tagged on your account. Please contact your supervisor or support.');
         }
 
+        // it can insert within the day
+        if (
+            $target_location->is_done == 1 &&
+            $request->date > $target_location->updated_at
+        ) {
+            return $this->responseUnprocessable('', 'You cannot insert foot counts because it is already done.');
+        }
 
         $create_foot_count = FootCount::create([
             "date" => $request->date,
@@ -55,7 +69,7 @@ class FootCountController extends Controller
             "total_male" => $request->total_male,
             "total_female" => $request->total_female,
             "grand_total" => $request->total_male +  $request->total_female,
-            "surveyor_id" => $request->surveyor_id,
+            "surveyor_id" => $user->id,
         ]);
 
         if ($request->target_location_id) {
@@ -109,8 +123,8 @@ class FootCountController extends Controller
 
     public function export(VehicleCountExportRequest $request)
     {
-        $target_locations = $request->query('target_locations', null);
+        $target_location_id = $request->query('target_location_id', null);
 
-        return Excel::download(new TrafficFootCountExport($target_locations), 'Foot Counts.xlsx');
+        return Excel::download(new TrafficFootCountExport($target_location_id), 'Foot Counts.xlsx');
     }
 }

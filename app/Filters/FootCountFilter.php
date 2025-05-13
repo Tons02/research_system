@@ -15,4 +15,8 @@ class FootCountFilter extends QueryFilters
         'total_male',
         'total_female',
     ];
+
+    protected array $relationSearch = [
+        'surveyor' => ['first_name','middle_name', 'last_name'],
+    ];
 }

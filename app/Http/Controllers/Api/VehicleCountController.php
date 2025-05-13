@@ -7,6 +7,8 @@ use App\Exports\VehicleCountExport;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\VehicleCountExportRequest;
 use App\Http\Requests\VehicleCountRequest;
+use App\Http\Resources\VehicleCountResource;
+use App\Models\TargetLocation;
 use App\Models\VehicleCount;
 use Carbon\Carbon;
 use Essa\APIToolKit\Api\ApiResponse;
@@ -22,30 +24,43 @@ class VehicleCountController extends Controller
     {
         $status = $request->query('status');
         $target_location_id = $request->query('target_location_id');
+        $pagination = $request->query('pagination');
 
-        $VehicleCount = VehicleCount::with(['target_locations', 'surveyor_id'])
-            ->when($status === "inactive", function ($query) {
-                $query->onlyTrashed();
+        $VehicleCount = VehicleCount::when($status === "inactive", function ($query) {
+            $query->onlyTrashed();
+        })
+            ->whereHas('target_locations', function ($query) use ($target_location_id) {
+                $query->where('target_location_id', $target_location_id);
             })
-            ->when(!is_null($target_location_id), function ($query) use ($target_location_id) {
-                $query->whereHas('target_locations', function ($query) use ($target_location_id) {
-                    $query->where('target_location_id', $target_location_id);
-                });
-            })
-            ->orderBy('created_at', 'desc')
+            ->orderBy('date', 'desc')
             ->useFilters()
             ->dynamicPaginate();
 
-        return $this->responseSuccess('Vehicle Count display successfully', $VehicleCount);
+        if (!$pagination) {
+            VehicleCountResource::collection($VehicleCount);
+        } else {
+            $VehicleCount = VehicleCountResource::collection($VehicleCount);
+        }
+        return $this->responseSuccess('Foot Count display successfully', $VehicleCount);
     }
 
     public function store(VehicleCountRequest $request)
     {
-        $user = auth('sanctum')->user()->load('vehicle_counted');
+        $user = auth('sanctum')->user();
 
+        $target_location = TargetLocation::find($request->target_location_id);
 
-        if ($user->vehicle_counted->isEmpty() || !$user->vehicle_counted[0]->vehicle_counted_by_user_id === $user->id) {
+        // check if the user is tag on the target location vehicle count
+        if ($target_location->vehicle_counted_by_user_id != $user->id) {
             return $this->responseUnprocessable('', 'You cannot insert vehicle counts because it is not tagged on your account. Please contact your supervisor or support.');
+        }
+
+        // it can insert within the day
+        if (
+            $target_location->is_done == 1 &&
+            $request->date > $target_location->updated_at
+        ) {
+            return $this->responseUnprocessable('', 'You cannot insert vehicle counts because it is already done.');
         }
 
         $create_vehicle_count = VehicleCount::create([
@@ -110,7 +125,7 @@ class VehicleCountController extends Controller
 
     public function export(VehicleCountExportRequest $request)
     {
-        $target_locations = $request->query('target_locations');
+        $target_locations = $request->query('target_location_id');
 
         return Excel::download(new TrafficCountExport($target_locations), 'Vehicle Counts.xlsx');
     }

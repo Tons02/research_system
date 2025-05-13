@@ -8,18 +8,18 @@ use Maatwebsite\Excel\Concerns\WithMultipleSheets;
 
 class TrafficCountExport implements WithMultipleSheets
 {
-    protected $target_locations;
+    protected $target_location_id;
 
-    public function __construct($target_locations)
+    public function __construct($target_location_id)
     {
-        $this->target_locations = $target_locations;
+        $this->target_location_id = $target_location_id;
     }
 
     public function sheets(): array
     {
         return [
-            new VehicleCountExport($this->target_locations),
-            new VehicleCountAverageExport($this->target_locations),
+            new VehicleCountExport($this->target_location_id),
+            new VehicleCountAverageExport($this->target_location_id),
         ];
     }
 }

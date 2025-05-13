@@ -13,6 +13,7 @@ return new class extends Migration
     {
         Schema::create('target_locations', function (Blueprint $table) {
             $table->increments('id');
+            $table->string('title');
             $table->string('region_psgc_id');
             $table->string('region');
             $table->string('province_psgc_id')->nullable();
@@ -33,6 +34,8 @@ return new class extends Migration
             $table->unsignedInteger("foot_counted_by_user_id")->index();
             $table->boolean('is_done')->default(false);
             $table->boolean('is_final')->default(false);
+            $table->date("start_date")->nullable();
+            $table->date("end_date")->nullable();
 
             $table->foreign("form_id")
                 ->references("id")

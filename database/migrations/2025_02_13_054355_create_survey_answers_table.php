@@ -30,6 +30,7 @@ return new class extends Migration
             $table->string('occupation');
             $table->string('structure_of_house');
             $table->string('ownership_of_house');
+            $table->string('house_rent')->nullable();
             $table->json('questionnaire_answer');
             $table->unsignedInteger("surveyor_id")->index();
 

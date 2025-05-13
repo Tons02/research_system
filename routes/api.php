@@ -79,6 +79,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     //Locations Controller
     Route::put('target-location-archived/{id}', [TargetLocationController::class, 'archived'])->middleware(['abilities:target-locations:crud']);
     Route::patch('target-location-finalized/{id}', [TargetLocationController::class, 'finalized'])->middleware(['abilities:target-locations:crud']);
+    Route::patch('target-location-end-survey/{id}', [TargetLocationController::class, 'endSurvey'])->middleware(['abilities:target-locations:crud']);
     Route::resource("target-locations", TargetLocationController::class)->middleware(['abilities:target-locations:crud']);
 
     // auth controller
@@ -87,20 +88,20 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::patch('resetpassword/{id}', [AuthController::class, 'resetPassword'])->middleware(['abilities:user-management:user-accounts:crud']);
 
     //Survey Answer Controller
-    Route::put('survey-answer-archived/{id}', [SurveyAnswerController::class, 'archived'])->middleware(['abilities:survey-answer:crud']);
-    Route::resource("survey-answers", SurveyAnswerController::class)->middleware(['abilities:survey-answer:crud']);
-    Route::get('survey-answer-export', [SurveyAnswerController::class, 'export'])->middleware(['abilities:survey-answer:crud']);
+    Route::put('survey-answer-archived/{id}', [SurveyAnswerController::class, 'archived'])->middleware(['abilities:reports:survey-answer:crud-export']);
+    Route::resource("survey-answers", SurveyAnswerController::class)->middleware(['abilities:reports:survey-answer:crud-export']);
+    Route::get('survey-answer-export', [SurveyAnswerController::class, 'export'])->middleware(['abilities:reports:survey-answer:crud-export']);
 
     //Question Answers Controller
-    Route::resource("question-answers", QuestionAnswerController::class)->middleware(['abilities:survey-answer:crud']);
+    Route::resource("question-answers", QuestionAnswerController::class)->middleware(['abilities:question-answer:crud']);
 
     //Vehicle Count Controller
-    Route::put('vehicle-count-archived/{id}', [VehicleCountController::class, 'archived'])->middleware(['abilities:survey-answer:crud']);
-    Route::get('vehicle-count-export', [VehicleCountController::class, 'export'])->middleware(['abilities:survey-answer:crud']);
-    Route::resource("vehicle-counts", VehicleCountController::class)->middleware(['abilities:survey-answer:crud']);
+    Route::put('vehicle-count-archived/{id}', [VehicleCountController::class, 'archived'])->middleware(['abilities:reports:vehicle-count:crud-export']);
+    Route::get('vehicle-count-export', [VehicleCountController::class, 'export'])->middleware(['abilities:reports:vehicle-count:crud-export']);
+    Route::resource("vehicle-counts", VehicleCountController::class)->middleware(['abilities:reports:vehicle-count:crud-export']);
 
     //Foot Count Controller
-    Route::put('foot-count-archived/{id}', [FootCountController::class, 'archived'])->middleware(['abilities:survey-answer:crud']);
-    Route::get('foot-count-export', [FootCountController::class, 'export'])->middleware(['abilities:survey-answer:crud']);
-    Route::resource("foot-counts", FootCountController::class)->middleware(['abilities:survey-answer:crud']);
+    Route::put('foot-count-archived/{id}', [FootCountController::class, 'archived'])->middleware(['abilities:reports:foot-count:crud-export']);
+    Route::get('foot-count-export', [FootCountController::class, 'export'])->middleware(['abilities:reports:foot-count:crud-export']);
+    Route::resource("foot-counts", FootCountController::class)->middleware(['abilities:reports:foot-count:crud-export']);
 });

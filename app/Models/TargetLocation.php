@@ -12,6 +12,7 @@ class TargetLocation extends Model
     use softDeletes, Filterable;
 
     protected $fillable = [
+        'title',
         'region_psgc_id',
         'region',
         'province_psgc_id',
@@ -31,6 +32,8 @@ class TargetLocation extends Model
         'is_final',
         'vehicle_counted_by_user_id',
         'foot_counted_by_user_id',
+        'start_date',
+        'end_date',
     ];
 
     public function form()
@@ -65,7 +68,7 @@ class TargetLocation extends Model
             "user_id",
             "id",
             "id"
-        )->withPivot('response_limit');
+        )->withPivot(['response_limit', 'is_done']);
     }
 
 

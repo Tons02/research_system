@@ -29,19 +29,19 @@ use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
 class VehicleCountAverageExport implements FromCollection, WithHeadings, WithStyles, WithTitle, WithMapping, WithDefaultStyles, WithColumnWidths, WithColumnFormatting, WithEvents
 {
-    protected $target_locations, $vehicleCounts;
+    protected $target_location_id, $vehicleCounts;
 
-    public function __construct($target_locations)
+    public function __construct($target_location_id)
     {
 
-        $this->target_locations = $target_locations;
+        $this->target_location_id = $target_location_id;
 
 
         // Fetch vehicle counts and filter by location using whereHas
         $data = DB::table('target_locations_vehicle_counts')
             ->join('vehicle_counts', 'target_locations_vehicle_counts.vehicle_count_id', '=', 'vehicle_counts.id')
             ->join('target_locations', 'target_locations_vehicle_counts.target_location_id', '=', 'target_locations.id')
-            ->where('target_locations_vehicle_counts.target_location_id', $this->target_locations)
+            ->where('target_locations_vehicle_counts.target_location_id', $this->target_location_id)
             ->orderBy('date', 'asc')
             ->get();
 
@@ -113,7 +113,11 @@ class VehicleCountAverageExport implements FromCollection, WithHeadings, WithSty
             ["VEHICULAR COUNT AVERAGE ON " . ($this->collection()->first()['target_location'] ?? 'NO AVAILABLE DATA')],
             [],
             [
-               'DATE', 'DAY', 'TOTAL', 'AM', 'PM'
+                'DATE',
+                'DAY',
+                'TOTAL',
+                'AM',
+                'PM'
             ]
         ];
     }
@@ -171,11 +175,11 @@ class VehicleCountAverageExport implements FromCollection, WithHeadings, WithSty
                     'size' => 11,
                 ],
                 'borders' => [
-                        'allBorders' => [
-                            'borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN,
-                            'color' => ['rgb' => '000000'],
-                        ],
+                    'allBorders' => [
+                        'borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN,
+                        'color' => ['rgb' => '000000'],
                     ],
+                ],
             ];
         }
         $highestRow = $sheet->getHighestRow();
@@ -271,7 +275,7 @@ class VehicleCountAverageExport implements FromCollection, WithHeadings, WithSty
 
                 foreach ($columnsToSum as $column) {
                     // Set the formula for the average
-                    $sheet->setCellValue("{$column}{$lastRow}",'AVERAGE');
+                    $sheet->setCellValue("{$column}{$lastRow}", 'AVERAGE');
 
                     // Apply styling to the cell
                     $sheet->getStyle("{$column}{$lastRow}")->applyFromArray([

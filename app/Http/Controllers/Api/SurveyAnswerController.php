@@ -12,6 +12,7 @@ use App\Http\Resources\SurveyAnswerResource;
 use App\Models\QuestionAnswer;
 use App\Models\SurveyAnswer;
 use App\Models\TargetLocation;
+use Carbon\Carbon;
 use Essa\APIToolKit\Api\ApiResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -28,11 +29,19 @@ class SurveyAnswerController extends Controller
         $from_date = $request->query('from_date');
         $to_date = $request->query('to_date');
 
+        if ($from_date) {
+            $from_date = Carbon::parse($from_date)->startOfDay();
+        }
+
+        if ($to_date) {
+            $to_date = Carbon::parse($to_date)->endOfDay();
+        }
+
         $SurveyAnswer = SurveyAnswer::when($status === "inactive", function ($query) {
             $query->onlyTrashed();
         })
             ->when($from_date != null && $to_date != null, function ($query) use ($from_date, $to_date) {
-                return $query->whereBetween('created_at', [$from_date, $to_date]);
+                return $query->whereBetween('date', [$from_date, $to_date]);
             })
             ->orderBy('created_at', 'desc')
             ->useFilters()
@@ -81,8 +90,7 @@ class SurveyAnswerController extends Controller
         $pivotLimit = optional($location->pivot)->response_limit;
         $locationLimit = $location->response_limit;
 
-        // Optional: Auto-mark as done if limit hit and pivot exists
-        if ($pivotLimit === $locationLimit && $locationLimit >= $total_survey_of_surveyor) {
+        if ($pivotLimit === $locationLimit && $total_survey_of_surveyor > $locationLimit) {
             $target_location = TargetLocation::find($location->id);
 
             if (! $target_location) {
@@ -127,6 +135,7 @@ class SurveyAnswerController extends Controller
                 "occupation" => $request["occupation"],
                 "structure_of_house" => $request["structure_of_house"],
                 "ownership_of_house" => $request["ownership_of_house"],
+                "house_rent" => $request["house_rent"],
                 "questionnaire_answer" => $request["questionnaire_answer"],
                 "surveyor_id" => auth('sanctum')->user()->id,
             ]);
@@ -207,7 +216,8 @@ class SurveyAnswerController extends Controller
 
                 $target_location->update(['is_done' => 1]);
 
-                return $this->responseUnprocessable('', 'Survey is done');
+                DB::commit();
+                return $this->responseCreated('Survey Answer Successfully Synced', '');
             }
 
             DB::commit();
@@ -222,8 +232,13 @@ class SurveyAnswerController extends Controller
     {
         $target_location_id = $request->query('target_location_id');
         $surveyor_id = $request->query('surveyor_id');
-        $from_date = $request->query('from_date');
-        $to_date = $request->query('to_date');
+        $from_date = $request->query('from_date')
+            ? Carbon::parse($request->query('from_date'))->startOfDay()
+            : Carbon::createFromFormat('m-d-Y', '03-01-2025')->startOfDay();
+
+        $to_date = $request->query('to_date')
+            ? Carbon::parse($request->query('to_date'))->endOfDay()
+            : Carbon::createFromFormat('m-d-Y', '03-01-2050')->startOfDay();
         $status = $request->query('status');
 
         $location_name = TargetLocation::find($target_location_id);
@@ -239,12 +254,31 @@ class SurveyAnswerController extends Controller
             $location_name->barangay ?? null
         ])));
 
-        $survey_count = SurveyAnswer::where('target_location_id', $target_location_id)->get()->count();
+
+        $survey_count = SurveyAnswer::where('target_location_id', $target_location_id)
+            ->when($surveyor_id, function ($query) use ($surveyor_id) {
+                $query->where('surveyor_id', $surveyor_id);
+            })
+            ->when($from_date && $to_date, function ($query) use ($from_date, $to_date) {
+                $query->whereBetween('created_at', [$from_date, $to_date]);
+            })
+            ->get()->count();
 
         if ($survey_count <= 0) {
             return $this->responseUnprocessable('', 'No Available Reports.');
         }
 
-        return Excel::download(new OverAllReport($target_location_id, $surveyor_id, $from_date, $to_date, $status), $target_location . ' Survey Answers.xlsx');
+        // return DB::table('survey_answers')
+        //     ->select('educational_attainment', 'income_class')
+        //     ->where('target_location_id', $target_location_id)
+        //     ->when($surveyor_id, function ($query) use ($surveyor_id) {
+        //         $query->where('surveyor_id', $surveyor_id);
+        //     })
+        //     ->when($from_date && $to_date, function ($query) use ($from_date, $to_date) {
+        //         $query->whereBetween('created_at', [$from_date, $to_date]);
+        //     })
+        //     ->get();
+
+        return Excel::download(new OverAllReport($target_location_id, $surveyor_id, $from_date, $to_date, $status),  ' Survey Answers.xlsx');
     }
 }

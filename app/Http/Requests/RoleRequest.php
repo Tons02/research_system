@@ -49,7 +49,9 @@ class RoleRequest extends FormRequest
                         "user-management:role-management:crud",
                         "form-management:crud",
                         "target-locations:crud",
-                        "survey-answer:crud"
+                        "reports:survey-answer:crud-export",
+                        "reports:vehicle-count:crud-export",
+                        "reports:foot-count:crud-export"
 
                     ];
 

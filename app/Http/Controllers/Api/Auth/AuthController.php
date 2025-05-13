@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Api\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ChangePasswordRequest;
-use App\Http\Requests\ForgetPasswordRequest;
 use App\Http\Resources\LoginResource;
 use App\Models\User;
 use Essa\APIToolKit\Api\ApiResponse;
@@ -34,7 +33,7 @@ class AuthController extends Controller
             return $this->responseBadRequest('', 'Invalid Credentials');
         }
 
-        $permissions = $login->role->access_permission ?? []; // Get permissions from the role or default to an empty array
+        $permissions = $login->role->access_permission ?? [];
         $token = $login->createToken($login->role->name, $permissions)->plainTextToken;
 
         $cookie = cookie('authcookie', $token);

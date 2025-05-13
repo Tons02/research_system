@@ -22,7 +22,7 @@ class VehicleCountExportRequest extends FormRequest
     public function rules(): array
     {
         return [
-            "target_locations" => ["required","exists:target_locations,id"],
+            "target_location_id" => ["required", "exists:target_locations,id"],
         ];
     }
 }

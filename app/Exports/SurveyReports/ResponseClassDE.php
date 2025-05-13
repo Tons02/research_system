@@ -49,7 +49,7 @@ class ResponseClassDE implements FromCollection, WithMapping, WithHeadings, With
                 $query->where('survey_answers.surveyor_id', $this->surveyor_id);
             })
             ->when($this->from_date && $this->to_date, function ($query) {
-                $query->whereBetween('survey_answers.created_at', [$this->from_date, $this->to_date]);
+                $query->whereBetween('survey_answers.date', [$this->from_date, $this->to_date]);
             })
             ->groupBy(
                 'question_answers.section',

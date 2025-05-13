@@ -8,14 +8,18 @@ class TargetLocationFilter extends QueryFilters
 {
     protected array $columnSearch = [
         'id',
-        'target_location',
-        'form_id',
+        'title',
+        'region',
+        'province',
+        'city_municipality',
+        'sub_municipality',
+        'barangay',
     ];
 
 
     public function is_final($is_final)
     {
-        if ($is_final !== null) {
+        if ($is_final == 1) {
             $this->builder->where('is_final', $is_final);
         }
         return $this;
@@ -23,9 +27,10 @@ class TargetLocationFilter extends QueryFilters
 
     public function is_done($is_done)
     {
-        if ($is_done !== null) {
+        if ($is_done == 1) {
             $this->builder->where('is_done', $is_done);
         }
         return $this;
     }
+
 }

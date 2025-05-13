@@ -17,6 +17,7 @@ use App\Models\Unit;
 use App\Models\SubUnit;
 use App\Models\Location;
 use App\Models\Role;
+use Illuminate\Support\Carbon;
 
 class User extends Authenticatable
 {
@@ -114,15 +115,17 @@ class User extends Authenticatable
     {
         return $this->belongsToMany(
             TargetLocation::class,
-            "target_locations_users",
-            "user_id",
-            "target_location_id",
-            "id",
-            "id"
+            'target_locations_users',
+            'user_id',
+            'target_location_id',
+            'id',
+            'id'
         )
-            ->withPivot('response_limit', 'is_done')
-            ->wherePivot('is_done', false)
-            ->where('is_final', true);
+        ->withPivot('response_limit', 'is_done')
+        ->wherePivot('is_done', false)
+        ->where('is_final', true)
+        ->where('start_date', '<', Carbon::now());
+
     }
 
     public function target_locations_users_history()
@@ -145,7 +148,8 @@ class User extends Authenticatable
         return $this->hasMany(TargetLocation::class, 'vehicle_counted_by_user_id')
             ->where('is_final', 1)
             ->where('is_done', 0)
-            ->withTrashed();
+            ->withTrashed()
+            ->where('start_date', '<', Carbon::now());
     }
 
     public function foot_counted()
@@ -153,6 +157,8 @@ class User extends Authenticatable
         return $this->hasMany(TargetLocation::class, 'foot_counted_by_user_id')
             ->where('is_final', 1)
             ->where('is_done', 0)
-            ->withTrashed();
+            ->withTrashed()
+            ->where('start_date', '<', Carbon::now());;
+
     }
 }

@@ -9,6 +9,7 @@ use App\Http\Requests\UserRequest;
 use App\Http\Resources\UserResource;
 use Essa\APIToolKit\Api\ApiResponse;
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Facades\Excel;
 
 class UserController extends Controller
@@ -18,20 +19,111 @@ class UserController extends Controller
     {
         $status = $request->query('status');
         $pagination = $request->query('pagination');
+        $target_location_users = $request->query('target_location_users');
+        $target_location_id_users_update = $request->query('target_location_id_users_update');
 
-        $User = User::when($status === "inactive", function ($query) {
+        $users = User::query()
+            ->when($status === 'inactive', function ($query) {
                 $query->onlyTrashed();
             })
+            ->when($target_location_users == 1, function ($query) {
+                $query
+                    // Exclude users with any unfinished target_locations_users
+                    ->whereNotIn('id', function ($q) {
+                        $q->select('user_id')
+                            ->from('target_locations_users')
+                            ->where('is_done', 0);
+                    })
+                    // Exclude unfinished vehicle counters
+                    ->whereNotIn('id', function ($q) {
+                        $q->select('vehicle_counted_by_user_id')
+                            ->from('target_locations')
+                            ->where('is_done', 0)
+                            ->whereNotNull('vehicle_counted_by_user_id');
+                    })
+                    // Exclude unfinished foot counters
+                    ->whereNotIn('id', function ($q) {
+                        $q->select('foot_counted_by_user_id')
+                            ->from('target_locations')
+                            ->where('is_done', 0)
+                            ->whereNotNull('foot_counted_by_user_id');
+                    });
+            })
+            ->when($target_location_id_users_update, function ($query) use ($target_location_id_users_update) {
+                $query
+                    // Include users assigned as unfinished vehicle counters
+                    ->orWhereExists(function ($q) use ($target_location_id_users_update) {
+                        $q->select(DB::raw(1))
+                            ->from('target_locations_users as tlu')
+                            ->join('target_locations as tl', 'tl.id', '=', 'tlu.target_location_id')
+                            ->whereColumn('users.id', 'tlu.user_id')
+                            ->where('tlu.is_done', 0)
+                            ->where('tl.is_final', 0)
+                            ->whereIn('tl.id', (array) $target_location_id_users_update);
+                    })
+                    // Include users assigned as unfinished vehicle counters
+                    ->orWhereIn('id', function ($q) use ($target_location_id_users_update) {
+                        $q->select('vehicle_counted_by_user_id')
+                            ->from('target_locations')
+                            ->where('is_final', 0)
+                            ->whereIn('id', (array) $target_location_id_users_update)
+                            ->whereNotNull('vehicle_counted_by_user_id');
+                    })
+                    // Include users assigned as unfinished foot counters
+                    ->orWhereIn('id', function ($q) use ($target_location_id_users_update) {
+                        $q->select('foot_counted_by_user_id')
+                            ->from('target_locations')
+                            ->where('is_final', 0)
+                            ->whereIn('id', (array) $target_location_id_users_update)
+                            ->whereNotNull('foot_counted_by_user_id');
+                    })
+                    // Include users assigned as unfinished vehicle counters
+                    ->orWhereExists(function ($q) use ($target_location_id_users_update) {
+                        $q->select(DB::raw(1))
+                            ->from('target_locations_users as tlu')
+                            ->join('target_locations as tl', 'tl.id', '=', 'tlu.target_location_id')
+                            ->whereColumn('users.id', 'tlu.user_id')
+                            ->where('tlu.is_done', 0)
+                            ->where('tl.is_final', 1)
+                            ->whereIn('tl.id', (array) $target_location_id_users_update);
+                    })
+                    // Include users assigned as unfinished vehicle counters
+                    ->orWhereIn('id', function ($q) use ($target_location_id_users_update) {
+                        $q->select('vehicle_counted_by_user_id')
+                            ->from('target_locations')
+                            ->where('is_final', 1)
+                            ->whereIn('id', (array) $target_location_id_users_update)
+                            ->whereNotNull('vehicle_counted_by_user_id');
+                    })
+                    // Include users assigned as unfinished foot counters
+                    ->orWhereIn('id', function ($q) use ($target_location_id_users_update) {
+                        $q->select('foot_counted_by_user_id')
+                            ->from('target_locations')
+                            ->where('is_final', 1)
+                            ->whereIn('id', (array) $target_location_id_users_update)
+                            ->whereNotNull('foot_counted_by_user_id');
+                    });
+            })
+            // ✅ Conditional eager loading
+            ->with(['target_locations_users' => function ($query) use ($target_location_users) {
+                if ($target_location_users == 1) {
+                    $query->where('target_locations_users.is_done', 1);
+                }
+            }])
+
             ->orderBy('created_at', 'desc')
             ->useFilters()
             ->dynamicPaginate();
 
+
+
+
         if (!$pagination) {
-            UserResource::collection($User);
+            UserResource::collection($users);
         } else {
-            $User = UserResource::collection($User);
+            $users = UserResource::collection($users);
         }
-        return $this->responseSuccess('User display successfully', $User);
+        return $this->responseSuccess('User display successfully', $users);
     }
 
     public function store(UserRequest $request)

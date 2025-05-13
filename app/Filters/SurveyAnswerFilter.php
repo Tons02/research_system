@@ -14,9 +14,8 @@ class SurveyAnswerFilter extends QueryFilters
 
     public function target_location_id($target_location_id)
     {
-        if ($target_location_id !== null) {
-            $this->builder->where('target_location_id', $target_location_id);
-        }
+        $this->builder->where('target_location_id', $target_location_id);
+
         return $this;
     }
 

@@ -11,9 +11,12 @@ use App\Http\Requests\TargetLocationRequest;
 use App\Models\Form;
 use App\Models\FormHistories;
 use App\Models\SurveyAnswer;
+use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 class TargetLocationController extends Controller
 {
@@ -60,6 +63,7 @@ class TargetLocationController extends Controller
 
             // Create target location
             $create_target_location = TargetLocation::create([
+                "title" => $request["title"],
                 "region_psgc_id" => $request["region_psgc_id"],
                 "region" => $request["region"],
                 "province_psgc_id" => $request["province_psgc_id"],
@@ -115,8 +119,11 @@ class TargetLocationController extends Controller
                 return $this->responseUnprocessable('', 'Invalid ID provided for updating. Please check the ID and try again.');
             }
 
-            if ($target_location->is_final) {
-                return $this->responseUnprocessable('', 'This target location is finalized and can no longer be edited.');
+            // Block if finalized or if the start date is in the past
+
+            if ($target_location->is_final && Carbon::now()->gt(Carbon::parse($target_location->start_date))) {
+
+                return $this->responseUnprocessable('', 'This target location is finalized or has already started and can no longer be edited.');
             }
 
             $form = Form::find($request['form_id']);
@@ -133,6 +140,7 @@ class TargetLocationController extends Controller
             $formHistoryUpdated = $form_history->wasChanged();
 
             // Update the target location details
+            $target_location->title = $request['title'];
             $target_location->region_psgc_id = $request['region_psgc_id'];
             $target_location->region = $request['region'];
             $target_location->province_psgc_id = $request['province_psgc_id'];
@@ -161,26 +169,31 @@ class TargetLocationController extends Controller
 
             // Check if surveyors pivot table has changes
             $existingSurveyorIds = $target_location->target_locations_users->pluck('id')->toArray();
+
             $pivotChanged = false;
 
-            // Loop through the surveyors provided in the request
             foreach ($request['surveyors'] as $surveyor) {
-                // Only update if the user_id already exists in the pivot
                 if (in_array($surveyor['user_id'], $existingSurveyorIds)) {
-                    // Fetch the pivot row
+                    // Existing user: update if needed
                     $pivot = $target_location->target_locations_users()->where('user_id', $surveyor['user_id'])->first();
 
-                    // Check if response_limit needs to be updated
                     if ($pivot && $pivot->pivot->response_limit != $surveyor['response_limit']) {
-                        // Update only the response_limit
                         $target_location->target_locations_users()->updateExistingPivot(
                             $surveyor['user_id'],
                             ['response_limit' => $surveyor['response_limit']]
                         );
                         $pivotChanged = true;
                     }
+                } else {
+                    // New user: attach to pivot
+                    $target_location->target_locations_users()->attach(
+                        $surveyor['user_id'],
+                        ['response_limit' => $surveyor['response_limit'], 'is_done' => 0]
+                    );
+                    $pivotChanged = true;
                 }
             }
+
 
 
             // If there were no changes at all
@@ -242,19 +255,67 @@ class TargetLocationController extends Controller
 
     public function finalized(TargetLocationRequest $request, $id)
     {
-        $target_location = TargetLocation::find($id);
+        DB::beginTransaction();
 
-        if (!$target_location) {
-            return $this->responseUnprocessable('', 'Invalid ID provided for finalizing. Please check the ID and try again.');
+        try {
+            $target_location = TargetLocation::where('id', $id)->first();
+
+            $addOneDay = Carbon::now()->addDay();
+            $allowanceOneDay = $addOneDay->format('Y-m-d H:i:s');
+
+            if (!$target_location) {
+                return $this->responseUnprocessable('', 'Invalid ID provided for finalizing. Please check the ID and try again.');
+            }
+
+            $target_location->update([
+                'form_id' => null,
+                'is_final' => $request["is_final"],
+                'start_date' => $allowanceOneDay,
+            ]);
+
+            DB::commit();
+            return $this->responseSuccess('Target Location successfully finalized', $target_location);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return $this->responseServerError('Network Error Please Try Again');
         }
-
-        $target_location->update([
-            'form_id' => null,
-            'is_final' => $request["is_final"],
-        ]);
-
-        return $this->responseSuccess('Target Location successfully finalized', $target_location);
     }
+
+
+    public function endSurvey(TargetLocationRequest $request, $id)
+    {
+        DB::beginTransaction();
+
+        try {
+            $target_location = TargetLocation::where('id', $id)->first();
+            $today = Carbon::now();
+            $TodayDate = $today->format('Y-m-d H:i:s');
+
+            if (!$target_location) {
+                return $this->responseUnprocessable('', 'Invalid ID provided for ending survey. Please check the ID and try again.');
+            }
+
+            if ($target_location->is_done === true) {
+                return $this->responseUnprocessable('', 'The target location has already ended.');
+            }
+
+            $target_location->update([
+                'is_done' => $request["is_done"],
+                'end_date' => $TodayDate,
+            ]);
+
+            DB::table('target_locations_users')
+                ->where('target_location_id', $target_location->id)
+                ->update(['is_done' =>  $request["is_done"]]);
+
+            DB::commit();
+            return $this->responseSuccess('Target Location successfully ended', $target_location);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return $this->responseServerError('Network Error Please Try Again');
+        }
+    }
+
 
     protected function getBoundBox($location)
     {

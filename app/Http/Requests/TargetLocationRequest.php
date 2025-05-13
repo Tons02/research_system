@@ -31,7 +31,10 @@ class TargetLocationRequest extends FormRequest
         return [
             "title" => [
                 "required",
-                "sometimes"
+                "sometimes",
+                $this->route()->target_location
+                    ? "unique:target_locations,title," . $this->route()->target_location
+                    : "unique:target_locations,title",
             ],
             "region_psgc_id" => [
                 "required",
@@ -98,6 +101,7 @@ class TargetLocationRequest extends FormRequest
                     $exists = DB::table('target_locations_users')
                         ->where('user_id', $value)
                         ->where('is_done', false)
+                        ->where('deleted_at', null)
                         ->exists();
 
                     if ($exists) {
@@ -119,6 +123,7 @@ class TargetLocationRequest extends FormRequest
                     // Get the current assigned user from the DB
                     $currentUserId = DB::table('target_locations')
                         ->where('id', $currentTargetLocationId)
+                        ->where('deleted_at', null)
                         ->value('vehicle_counted_by_user_id');
 
                     // If the value hasn't changed, skip this validation
@@ -131,6 +136,7 @@ class TargetLocationRequest extends FormRequest
                             $query->where('vehicle_counted_by_user_id', $value)
                                 ->orWhere('foot_counted_by_user_id', $value);
                         })
+                        ->where('deleted_at', null)
                         ->where('is_done', false)
                         ->exists();
 
@@ -153,6 +159,7 @@ class TargetLocationRequest extends FormRequest
                     // Get the current assigned user from the DB
                     $currentUserId = DB::table('target_locations')
                         ->where('id', $currentTargetLocationId)
+                        ->where('deleted_at', null)
                         ->value('foot_counted_by_user_id');
 
                     // If the value hasn't changed, skip this validation
@@ -166,6 +173,7 @@ class TargetLocationRequest extends FormRequest
                             $query->where('vehicle_counted_by_user_id', $value)
                                 ->orWhere('foot_counted_by_user_id', $value);
                         })
+                        ->where('deleted_at', null)
                         ->where('is_done', false)
                         ->where('id', '!=', $currentTargetLocationId)
                         ->exists();

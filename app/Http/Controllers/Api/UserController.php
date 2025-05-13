@@ -32,21 +32,24 @@ class UserController extends Controller
                     ->whereNotIn('id', function ($q) {
                         $q->select('user_id')
                             ->from('target_locations_users')
-                            ->where('is_done', 0);
+                            ->where('is_done', 0)
+                            ->where('deleted_at', null);
                     })
                     // Exclude unfinished vehicle counters
                     ->whereNotIn('id', function ($q) {
                         $q->select('vehicle_counted_by_user_id')
                             ->from('target_locations')
                             ->where('is_done', 0)
-                            ->whereNotNull('vehicle_counted_by_user_id');
+                            ->whereNotNull('vehicle_counted_by_user_id')
+                            ->where('deleted_at', null);
                     })
                     // Exclude unfinished foot counters
                     ->whereNotIn('id', function ($q) {
                         $q->select('foot_counted_by_user_id')
                             ->from('target_locations')
                             ->where('is_done', 0)
-                            ->whereNotNull('foot_counted_by_user_id');
+                            ->whereNotNull('foot_counted_by_user_id')
+                            ->where('deleted_at', null);
                     });
             })
             ->when($target_location_id_users_update, function ($query) use ($target_location_id_users_update) {
@@ -85,7 +88,8 @@ class UserController extends Controller
                             ->whereColumn('users.id', 'tlu.user_id')
                             ->where('tlu.is_done', 0)
                             ->where('tl.is_final', 1)
-                            ->whereIn('tl.id', (array) $target_location_id_users_update);
+                            ->whereIn('tl.id', (array) $target_location_id_users_update)
+                            ;
                     })
                     // Include users assigned as unfinished vehicle counters
                     ->orWhereIn('id', function ($q) use ($target_location_id_users_update) {
@@ -93,7 +97,8 @@ class UserController extends Controller
                             ->from('target_locations')
                             ->where('is_final', 1)
                             ->whereIn('id', (array) $target_location_id_users_update)
-                            ->whereNotNull('vehicle_counted_by_user_id');
+                            ->whereNotNull('vehicle_counted_by_user_id')
+                            ;
                     })
                     // Include users assigned as unfinished foot counters
                     ->orWhereIn('id', function ($q) use ($target_location_id_users_update) {
@@ -101,8 +106,10 @@ class UserController extends Controller
                             ->from('target_locations')
                             ->where('is_final', 1)
                             ->whereIn('id', (array) $target_location_id_users_update)
-                            ->whereNotNull('foot_counted_by_user_id');
-                    });
+                            ->whereNotNull('foot_counted_by_user_id')
+                            ;
+                    })
+                    ->withTrashed();
             })
             // ✅ Conditional eager loading
             ->with(['target_locations_users' => function ($query) use ($target_location_users) {

@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\softDeletes;
 use Essa\APIToolKit\Filters\Filterable;
 use App\Filters\TargetLocationFilter;
+use App\Models\TargetLocationUsers;
 
 class TargetLocation extends Model
 {
@@ -68,7 +69,10 @@ class TargetLocation extends Model
             "user_id",
             "id",
             "id"
-        )->withPivot(['response_limit', 'is_done']);
+        )
+        ->using(TargetLocationUsers::class)
+        ->withTimestamps()
+        ->withPivot(['response_limit', 'is_done', 'deleted_at']);
     }
 
 

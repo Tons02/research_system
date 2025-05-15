@@ -117,12 +117,28 @@ class TargetLocationRequest extends FormRequest
                 'different:foot_counted_by_user_id',
                 Rule::notIn($this->input('surveyors.*.user_id')),
                 function ($attribute, $value, $fail)  use ($existingUserIds) {
+                    if (in_array($value, $existingUserIds)) {
+                        return;
+                    }
+
+                    // Validate only if it's a new user
+                    $exists = DB::table('target_locations_users')
+                        ->where('user_id', $value)
+                        ->where('is_done', false)
+                        ->where('deleted_at', null)
+                        ->exists();
+
+                    if ($exists) {
+                        // i want to show the name of surveyor on the error message
+                        $fail("The user in surveyors is already assigned to another incomplete target location.");
+                    }
                     // Get the ID of the current record being updated
                     $currentTargetLocationId = $this->route('target_location');
 
                     // Get the current assigned user from the DB
                     $currentUserId = DB::table('target_locations')
                         ->where('id', $currentTargetLocationId)
+                        ->where('is_done', false)
                         ->where('deleted_at', null)
                         ->value('vehicle_counted_by_user_id');
 
@@ -160,6 +176,7 @@ class TargetLocationRequest extends FormRequest
                     $currentUserId = DB::table('target_locations')
                         ->where('id', $currentTargetLocationId)
                         ->where('deleted_at', null)
+                        ->where('is_done', false)
                         ->value('foot_counted_by_user_id');
 
                     // If the value hasn't changed, skip this validation

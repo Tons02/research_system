@@ -66,7 +66,11 @@ Route::middleware(['auth:sanctum'])->group(function () {
     // User Controller
     Route::put('user-archived/{id}', [UserController::class, 'archived'])->middleware(['abilities:user-management:user-accounts:crud']);
     Route::get('users-export', [UserController::class, 'export'])->middleware(['abilities:user-management:user-accounts:crud']);
-    Route::resource("user", UserController::class)->middleware(['abilities:user-management:user-accounts:crud']);
+    Route::get('user', [UserController::class, 'index']);
+    // Protected resource routes (CRUD operations require middleware)
+    Route::middleware(['abilities:user-management:user-accounts:crud'])->group(function () {
+        Route::resource('user', UserController::class)->except(['index']);
+    });
 
     //Form Controller
     Route::put('form-archived/{id}', [FormController::class, 'archived'])->middleware(['abilities:form-management:crud']);
@@ -80,7 +84,11 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::put('target-location-archived/{id}', [TargetLocationController::class, 'archived'])->middleware(['abilities:target-locations:crud']);
     Route::patch('target-location-finalized/{id}', [TargetLocationController::class, 'finalized'])->middleware(['abilities:target-locations:crud']);
     Route::patch('target-location-end-survey/{id}', [TargetLocationController::class, 'endSurvey'])->middleware(['abilities:target-locations:crud']);
-    Route::resource("target-locations", TargetLocationController::class)->middleware(['abilities:target-locations:crud']);
+    Route::get('target-locations', [TargetLocationController::class, 'index']);
+    // Protected resource routes (CRUD operations require middleware)
+    Route::middleware(['abilities:target-locations:crud'])->group(function () {
+        Route::resource('target-locations', TargetLocationController::class)->except(['index']);
+    });
 
     // auth controller
     Route::patch('changepassword', [AuthController::class, 'changedPassword'])->middleware(['abilities:user-management:user-accounts:crud']);

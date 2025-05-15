@@ -33,6 +33,7 @@ class VehicleCountExport implements FromCollection, WithHeadings, WithStyles, Wi
                 $query->where('target_location_id', $this->target_location_id);
             })
             ->orderBy('date', 'asc')
+            ->orderBy('time', 'asc')
             ->get();
     }
 

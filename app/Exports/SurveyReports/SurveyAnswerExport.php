@@ -155,7 +155,8 @@ class SurveyAnswerExport implements FromCollection, WithMapping, WithHeadings, W
 
                 foreach ($dates as $dateGroup) {
                     // Write Date header
-                    $sheet->setCellValue("A{$row}", "# Date: {$dateGroup['date']}");
+                    $date = (new \DateTime($dateGroup['date']))->format('F d, Y'); // Converts to "May 04, 2024"
+                    $sheet->setCellValue("A{$row}", "Date: {$date}");
                     $sheet->mergeCells("A{$row}:B{$row}");
                     $sheet->getStyle("A{$row}")->applyFromArray([
                         'font' => ['bold' => true, 'size' => 13, 'name' => 'Century Gothic'],

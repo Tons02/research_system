@@ -173,27 +173,22 @@ class TargetLocationController extends Controller
 
             $pivotChanged = false;
 
-            foreach ($request['surveyors'] as $surveyor) {
-                if (in_array($surveyor['user_id'], $existingSurveyorIds)) {
-                    // Existing user: update if needed
-                    $pivot = $target_location->target_locations_users()->where('user_id', $surveyor['user_id'])->first();
+            $target_location->target_locations_users()->detach();
 
-                    if ($pivot && $pivot->pivot->response_limit != $surveyor['response_limit']) {
-                        $target_location->target_locations_users()->updateExistingPivot(
-                            $surveyor['user_id'],
-                            ['response_limit' => $surveyor['response_limit']]
-                        );
-                        $pivotChanged = true;
-                    }
-                } else {
-                    // New user: attach to pivot
-                    $target_location->target_locations_users()->attach(
-                        $surveyor['user_id'],
-                        ['response_limit' => $surveyor['response_limit'], 'is_done' => 0]
-                    );
-                    $pivotChanged = true;
-                }
+            // Attach new surveyors with their response limits
+            foreach ($request['surveyors'] as $surveyor) {
+                $target_location->target_locations_users()->attach(
+                    $surveyor['user_id'],
+                    [
+                        'response_limit' => $surveyor['response_limit'],
+                        'is_done' => 0
+                    ]
+                );
             }
+
+            // Optional: If you want to track if something changed
+            $pivotChanged = count($request['surveyors']) > 0;
+
 
 
 

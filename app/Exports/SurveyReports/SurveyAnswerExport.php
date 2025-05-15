@@ -35,6 +35,7 @@ class SurveyAnswerExport implements FromCollection, WithMapping, WithHeadings, W
         $data = QuestionAnswer::query()
             ->join('survey_answers', 'question_answers.survey_id', '=', 'survey_answers.id')
             ->select(
+                'survey_answers.id as survey_id',
                 'question_answers.section',
                 'survey_answers.target_location_id',
                 'survey_answers.date',
@@ -54,50 +55,53 @@ class SurveyAnswerExport implements FromCollection, WithMapping, WithHeadings, W
             ->orderBy('question_answers.id', 'asc')
             ->get();
 
-            $groupedByDate = [];
+        $groupedBySurvey = [];
 
-            foreach ($data as $item) {
-                $date = $item->date;
-                $section = $item->section ?? 'Uncategorized';
+        foreach ($data as $item) {
+            $surveyId = $item->survey_id;
+            $section = $item->section ?? 'Uncategorized';
 
-                if (!isset($groupedByDate[$date])) {
-                    $groupedByDate[$date] = [
-                        'date' => $date,
-                        'sections' => []
-                    ];
-                }
-
-                if (!isset($groupedByDate[$date]['sections'][$section])) {
-                    $groupedByDate[$date]['sections'][$section] = [
-                        'section' => $section,
-                        'questions' => []
-                    ];
-                }
-
-                $groupedByDate[$date]['sections'][$section]['questions'][] = [
-                    'question' => $item->question,
-                    'answer' => $item->answer
+            if (!isset($groupedBySurvey[$surveyId])) {
+                $groupedBySurvey[$surveyId] = [
+                    'survey_id' => $surveyId,
+                    'target_location_id' => $item->target_location_id,
+                    'date' => $item->date,
+                    'sections' => []
                 ];
             }
 
-            // Reformat to clean output (remove associative keys)
-            $finalResult = [];
-
-            foreach ($groupedByDate as $dateGroup) {
-                $sectionsArray = [];
-
-                foreach ($dateGroup['sections'] as $sectionData) {
-                    $sectionsArray[] = $sectionData;
-                }
-
-                $finalResult[] = [
-                    'date' => $dateGroup['date'],
-                    'sections' => $sectionsArray
+            if (!isset($groupedBySurvey[$surveyId]['sections'][$section])) {
+                $groupedBySurvey[$surveyId]['sections'][$section] = [
+                    'section' => $section,
+                    'questions' => []
                 ];
             }
+
+            $groupedBySurvey[$surveyId]['sections'][$section]['questions'][] = [
+                'question' => $item->question,
+                'answer' => $item->answer
+            ];
+        }
+
+        // Reformat to clean output (remove associative keys)
+        $finalResult = [];
+
+        foreach ($groupedBySurvey as $surveyGroup) {
+            $sectionsArray = [];
+
+            foreach ($surveyGroup['sections'] as $sectionData) {
+                $sectionsArray[] = $sectionData;
+            }
+
+            $finalResult[] = [
+                'survey_id' => $surveyGroup['survey_id'],
+                'target_location_id' => $surveyGroup['target_location_id'],
+                'date' => $surveyGroup['date'],
+                'sections' => $sectionsArray
+            ];
+        }
 
         return collect($finalResult);
-
     }
 
     public function title(): string

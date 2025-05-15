@@ -30,7 +30,8 @@ class LoginResource extends JsonResource
                 return [
                     'target_location_id' => $surveyor->id,
                     'title' => $surveyor->title,
-                    'form_history' => $surveyor->form_histories,
+                    'form_history_id' => $surveyor->form_histories->id,
+                    // 'form_history' => $surveyor->form_histories,
                     'target_location' => implode(', ', array_filter([
                         $surveyor->region,
                         $surveyor->province,

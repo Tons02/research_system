@@ -297,6 +297,10 @@ class TargetLocationController extends Controller
                 return $this->responseUnprocessable('', 'Invalid ID provided for finalizing. Please check the ID and try again.');
             }
 
+             if ($target_location->is_final == 1) {
+                return $this->responseUnprocessable('', 'The survey on this target location is already started');
+            }
+
             $target_location->update([
                 'form_id' => null,
                 'is_final' => $request["is_final"],

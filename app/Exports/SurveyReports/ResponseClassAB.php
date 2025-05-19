@@ -171,13 +171,22 @@ class ResponseClassAB implements FromCollection, WithMapping, WithHeadings, With
 
                         // Write answers
                         foreach ($question['answers'] as $answer) {
-                            $sheet->setCellValue("B{$row}", $answer['answer']);
+                            // Format the cell as text BEFORE setting the value
+                            $sheet->getStyle("B{$row}")->getNumberFormat()
+                                ->setFormatCode(\PhpOffice\PhpSpreadsheet\Style\NumberFormat::FORMAT_TEXT);
+
+                            // Force the value to be treated as a string (no apostrophe shown in Excel)
+                            $sheet->setCellValueExplicit("B{$row}", $answer['answer'], \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
+
                             $sheet->getStyle("B{$row}")->getFont()
                                 ->setName('Century Gothic')
                                 ->setSize(9);
+
                             $sheet->setCellValue("C{$row}", $answer['count']);
-                            $sheet->getStyle("C{$row}")->getFont()->setName('Century Gothic')
+                            $sheet->getStyle("C{$row}")->getFont()
+                                ->setName('Century Gothic')
                                 ->setSize(9);
+
                             $row++;
                         }
 

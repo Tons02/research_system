@@ -169,14 +169,24 @@ class ResponseClassC implements FromCollection, WithMapping, WithHeadings, WithT
                         $row++;
 
                         // Write answers
+                        // Write answers
                         foreach ($question['answers'] as $answer) {
-                            $sheet->setCellValue("B{$row}", $answer['answer']);
+                            // Format the cell as text BEFORE setting the value
+                            $sheet->getStyle("B{$row}")->getNumberFormat()
+                                ->setFormatCode(\PhpOffice\PhpSpreadsheet\Style\NumberFormat::FORMAT_TEXT);
+
+                            // Force the value to be treated as a string (no apostrophe shown in Excel)
+                            $sheet->setCellValueExplicit("B{$row}", $answer['answer'], \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
+
                             $sheet->getStyle("B{$row}")->getFont()
                                 ->setName('Century Gothic')
                                 ->setSize(9);
+
                             $sheet->setCellValue("C{$row}", $answer['count']);
-                            $sheet->getStyle("C{$row}")->getFont()->setName('Century Gothic')
+                            $sheet->getStyle("C{$row}")->getFont()
+                                ->setName('Century Gothic')
                                 ->setSize(9);
+
                             $row++;
                         }
 
@@ -189,6 +199,9 @@ class ResponseClassC implements FromCollection, WithMapping, WithHeadings, WithT
                 $sheet->getColumnDimension('A')->setWidth(50);
                 $sheet->getColumnDimension('B')->setWidth(30);
                 $sheet->getColumnDimension('C')->setWidth(15);
+
+                $sheet->getStyle('B')->getNumberFormat()
+                    ->setFormatCode(\PhpOffice\PhpSpreadsheet\Style\NumberFormat::FORMAT_TEXT);
 
                 // Apply borders to all cells with content
                 $lastRow = $row - 1;

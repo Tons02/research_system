@@ -8,7 +8,6 @@ class UserFilter extends QueryFilters
 {
     protected array $columnSearch = [
         "id_prefix",
-
         "id_no",
         "first_name",
         "middle_name",
@@ -26,5 +25,4 @@ class UserFilter extends QueryFilters
         'location' => ['location_name'],
         'role' => ['name']
     ];
-
 }

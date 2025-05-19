@@ -44,6 +44,17 @@ class TargetLocationController extends Controller
         return $this->responseSuccess('Target Location display successfully', $TargetLocation);
     }
 
+    public function show(Request $request, $id)
+    {
+        $TargetLocation = TargetLocation::where('id', $id)->first();
+
+        if (!$TargetLocation) {
+            return $this->responseUnprocessable('', 'Invalid ID');
+        }
+
+        return $this->responseSuccess('Single Target Location display successfully', $TargetLocation);
+    }
+
     public function store(TargetLocationRequest $request)
     {
         DB::beginTransaction(); // Start the transaction

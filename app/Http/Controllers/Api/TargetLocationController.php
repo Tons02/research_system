@@ -100,7 +100,7 @@ class TargetLocationController extends Controller
                 );
             }
             DB::commit();
-            return $this->responseCreated('Form Successfully Created', $create_target_location);
+            return $this->responseCreated('Target Location Successfully Created', $create_target_location);
         } catch (\Exception $e) {
             DB::rollBack(); // Rollback transaction if an error occurs
             return $this->responseServerError('Network Error Please Try Again');
@@ -266,8 +266,8 @@ class TargetLocationController extends Controller
                 $target_location->delete();
 
                 foreach ($target_location->target_locations_users as $user) {
-                        $user->pivot->delete(); // soft deletes the pivot
-                    }
+                    $user->pivot->delete(); // soft deletes the pivot
+                }
 
                 DB::commit();
                 return $this->responseSuccess('Target Location successfully archived', $target_location);
@@ -292,7 +292,7 @@ class TargetLocationController extends Controller
                 return $this->responseUnprocessable('', 'Invalid ID provided for finalizing. Please check the ID and try again.');
             }
 
-             if ($target_location->is_final == 1) {
+            if ($target_location->is_final == 1) {
                 return $this->responseUnprocessable('', 'The survey on this target location is already started');
             }
 

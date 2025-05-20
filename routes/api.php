@@ -84,10 +84,11 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::put('target-location-archived/{id}', [TargetLocationController::class, 'archived'])->middleware(['abilities:target-locations:crud']);
     Route::patch('target-location-finalized/{id}', [TargetLocationController::class, 'finalized'])->middleware(['abilities:target-locations:crud']);
     Route::patch('target-location-end-survey/{id}', [TargetLocationController::class, 'endSurvey'])->middleware(['abilities:target-locations:crud']);
-    Route::get('target-locations', [TargetLocationController::class, 'index']);
+
+    Route::get('target-locations/{target_location}', [TargetLocationController::class, 'show']);
     // Protected resource routes (CRUD operations require middleware)
     Route::middleware(['abilities:target-locations:crud'])->group(function () {
-        Route::resource('target-locations', TargetLocationController::class)->except(['index']);
+        Route::resource('target-locations', TargetLocationController::class)->except(['show']);
     });
 
     // auth controller

@@ -92,7 +92,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     });
 
     // auth controller
-    Route::patch('changepassword', [AuthController::class, 'changedPassword'])->middleware(['abilities:user-management:user-accounts:crud']);
+    Route::patch('changepassword', [AuthController::class, 'changedPassword']);
     Route::post('logout', [AuthController::class, 'logout']);
     Route::patch('resetpassword/{id}', [AuthController::class, 'resetPassword'])->middleware(['abilities:user-management:user-accounts:crud']);
 

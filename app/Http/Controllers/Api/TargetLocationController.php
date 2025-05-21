@@ -229,7 +229,46 @@ class TargetLocationController extends Controller
             return $this->responseUnprocessable('', 'Invalid id please check the id and try again.');
         }
 
+        if (User::where('id', $target_location->vehicle_counted_by_user_id)
+            ->onlyTrashed()
+            ->exists()
+        ) {
+            return $this->responseUnprocessable('', 'Unable to restore. The user tagged on vehicle count is archived');
+        }
+
+        if (User::where('id', $target_location->foot_counted_by_user_id)
+            ->onlyTrashed()
+            ->exists()
+        ) {
+            return $this->responseUnprocessable('', 'Unable to restore. The user tagged on foot count is archived');
+        }
+
+        $userIds = TargetLocationUsers::withTrashed()
+            ->where('target_location_id', $target_location->id)
+            ->pluck('user_id');
+
+        // Fetch soft-deleted users from the Users model
+        $archivedUsers = User::onlyTrashed()
+            ->whereIn('id', $userIds)
+            ->get(['first_name', 'last_name']);
+
+        if ($archivedUsers->isNotEmpty()) {
+            $names = $archivedUsers
+                ->map(fn($user) => "{$user->first_name} {$user->last_name}")
+                ->implode(', ');
+
+            return $this->responseUnprocessable('', "Unable to restore. The following user(s) tagged as surveyor are archived: {$names}");
+        }
+
         if ($target_location->deleted_at) {
+
+            if (TargetLocation::orwhere('vehicle_counted_by_user_id', $id)
+                ->where('is_done', 0)
+                ->orwhere('foot_counted_by_user_id', $id)
+                ->exists()
+            ) {
+                return $this->responseUnprocessable('', 'Unable to restore. Some users are already assigned to another active target location.');
+            }
 
             // Get all users associated (including soft-deleted pivot records)
             $userIds = TargetLocationUsers::withTrashed()

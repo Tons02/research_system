@@ -70,9 +70,10 @@ class TargetLocation extends Model
             "id",
             "id"
         )
-        ->using(TargetLocationUsers::class)
-        ->withTimestamps()
-        ->withPivot(['response_limit', 'is_done', 'deleted_at']);
+            ->using(TargetLocationUsers::class)
+            ->withTimestamps()
+            ->withTrashed()
+            ->withPivot(['response_limit', 'is_done', 'deleted_at']);
     }
 
 

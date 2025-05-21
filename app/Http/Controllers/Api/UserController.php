@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Http\Requests\UserRequest;
 use App\Http\Resources\UserResource;
+use App\Models\TargetLocation;
 use Essa\APIToolKit\Api\ApiResponse;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
@@ -89,7 +90,7 @@ class UserController extends Controller
                             ->where('tlu.is_done', 0)
                             ->where('tl.is_final', 1)
                             ->whereIn('tl.id', (array) $target_location_id_users_update)
-                            ;
+                        ;
                     })
                     // Include users assigned as unfinished vehicle counters
                     ->orWhereIn('id', function ($q) use ($target_location_id_users_update) {
@@ -98,7 +99,7 @@ class UserController extends Controller
                             ->where('is_final', 1)
                             ->whereIn('id', (array) $target_location_id_users_update)
                             ->whereNotNull('vehicle_counted_by_user_id')
-                            ;
+                        ;
                     })
                     // Include users assigned as unfinished foot counters
                     ->orWhereIn('id', function ($q) use ($target_location_id_users_update) {
@@ -107,7 +108,7 @@ class UserController extends Controller
                             ->where('is_final', 1)
                             ->whereIn('id', (array) $target_location_id_users_update)
                             ->whereNotNull('foot_counted_by_user_id')
-                            ;
+                        ;
                     })
                     ->withTrashed();
             })
@@ -190,13 +191,21 @@ class UserController extends Controller
     public function archived(Request $request, $id)
     {
         if ($id == auth('sanctum')->user()->id) {
-            return $this->responseUnprocessable('', 'Unable to Archive, User already in used!');
+            return $this->responseUnprocessable('', 'Unable to archive. You cannot archive your own account.');
         }
 
         $user = User::withTrashed()->find($id);
 
         if (!$user) {
             return $this->responseUnprocessable('', 'Invalid id please check the id and try again.');
+        }
+
+        if (TargetLocation::orwhere('vehicle_counted_by_user_id', $id)
+            ->where('is_done', 0)
+            ->orwhere('foot_counted_by_user_id', $id)
+            ->exists()
+        ) {
+            return $this->responseUnprocessable('', 'Unable to archive. The user is tagged to an active target location.');
         }
 
         if ($user->deleted_at) {

@@ -36,6 +36,7 @@ class SurveyAnswerExport implements FromCollection, WithMapping, WithHeadings, W
             ->join('survey_answers', 'question_answers.survey_id', '=', 'survey_answers.id')
             ->select(
                 'survey_answers.id as survey_id',
+                'survey_answers.name',
                 'question_answers.section',
                 'survey_answers.target_location_id',
                 'survey_answers.date',
@@ -64,6 +65,7 @@ class SurveyAnswerExport implements FromCollection, WithMapping, WithHeadings, W
             if (!isset($groupedBySurvey[$surveyId])) {
                 $groupedBySurvey[$surveyId] = [
                     'survey_id' => $surveyId,
+                    'name' => $item->name,
                     'target_location_id' => $item->target_location_id,
                     'date' => $item->date,
                     'sections' => []
@@ -95,6 +97,7 @@ class SurveyAnswerExport implements FromCollection, WithMapping, WithHeadings, W
 
             $finalResult[] = [
                 'survey_id' => $surveyGroup['survey_id'],
+                'name' => $surveyGroup['name'], // ✅ add this line
                 'target_location_id' => $surveyGroup['target_location_id'],
                 'date' => $surveyGroup['date'],
                 'sections' => $sectionsArray
@@ -112,6 +115,7 @@ class SurveyAnswerExport implements FromCollection, WithMapping, WithHeadings, W
     public function headings(): array
     {
         return [
+            'Name',
             'Question',
             'Answers',
         ];
@@ -138,10 +142,11 @@ class SurveyAnswerExport implements FromCollection, WithMapping, WithHeadings, W
                 $row = 2; // Start from row 2 (after headers)
 
                 // Set column headers
-                $sheet->setCellValue('A1', 'Question');
-                $sheet->setCellValue('B1', 'Answer');
+                $sheet->setCellValue('A1', 'Name');
+                $sheet->setCellValue('B1', 'Question');
+                $sheet->setCellValue('C1', 'Answer');
 
-                $sheet->getStyle("A1:B1")->applyFromArray([
+                $sheet->getStyle("A1:C1")->applyFromArray([
                     'font' => ['bold' => true, 'size' => 12, 'name' => 'Century Gothic'],
                     'fill' => [
                         'fillType' => Fill::FILL_SOLID,
@@ -152,13 +157,22 @@ class SurveyAnswerExport implements FromCollection, WithMapping, WithHeadings, W
                 $row = 2;
 
                 $dates = $this->collection(); // This now returns a structure grouped by date
-
                 foreach ($dates as $dateGroup) {
                     // Write Date header
                     $date = (new \DateTime($dateGroup['date']))->format('F d, Y'); // Converts to "May 04, 2024"
-                    $sheet->setCellValue("A{$row}", "Date: {$date}");
-                    $sheet->mergeCells("A{$row}:B{$row}");
+                    $sheet->setCellValue("A{$row}", "{$dateGroup['name']}");
+                    $sheet->setCellValue("B{$row}", "Date: {$date}");
+                    $sheet->mergeCells("B{$row}:C{$row}");
+                    // design for name
                     $sheet->getStyle("A{$row}")->applyFromArray([
+                        'font' => ['bold' => true, 'size' => 13, 'name' => 'Century Gothic'],
+                        'fill' => [
+                            'fillType' => Fill::FILL_SOLID,
+                            'startColor' => ['argb' => 'FFB4C6E7'] // Optional: Light blue background
+                        ]
+                    ]);
+
+                    $sheet->getStyle("B{$row}")->applyFromArray([
                         'font' => ['bold' => true, 'size' => 13, 'name' => 'Century Gothic'],
                         'fill' => [
                             'fillType' => Fill::FILL_SOLID,
@@ -169,9 +183,9 @@ class SurveyAnswerExport implements FromCollection, WithMapping, WithHeadings, W
 
                     foreach ($dateGroup['sections'] as $section) {
                         // Write Section
-                        $sheet->setCellValue("A{$row}", "Section: {$section['section']}");
-                        $sheet->mergeCells("A{$row}:B{$row}");
-                        $sheet->getStyle("A{$row}")->applyFromArray([
+                        $sheet->setCellValue("B{$row}", "Section: {$section['section']}");
+                        $sheet->mergeCells("B{$row}:C{$row}");
+                        $sheet->getStyle("B{$row}")->applyFromArray([
                             'font' => ['bold' => true, 'size' => 12, 'name' => 'Century Gothic'],
                             'fill' => [
                                 'fillType' => Fill::FILL_SOLID,
@@ -181,14 +195,14 @@ class SurveyAnswerExport implements FromCollection, WithMapping, WithHeadings, W
                         $row++;
 
                         foreach ($section['questions'] as $qa) {
-                            $sheet->setCellValue("A{$row}", $qa['question']);
-                           $value = $qa['answer'];
+                            $sheet->setCellValue("B{$row}", $qa['question']);
+                            $value = $qa['answer'];
                             if ((is_numeric($value) && strlen((string) $value) > 11) || str_starts_with($value, '+')) {
                                 $sheet->setCellValueExplicit("B{$row}", (string) $value, DataType::TYPE_STRING);
                             } else {
-                                $sheet->setCellValue("B{$row}", $value);
+                                $sheet->setCellValue("C{$row}", $value);
                             }
-                            $sheet->getStyle("A{$row}:B{$row}")->getFont()->setName('Century Gothic')->setSize(10);
+                            $sheet->getStyle("A{$row}:C{$row}")->getFont()->setName('Century Gothic')->setSize(10);
                             $row++;
                         }
 
@@ -202,16 +216,17 @@ class SurveyAnswerExport implements FromCollection, WithMapping, WithHeadings, W
 
 
                 // Set column widths
-                $sheet->getColumnDimension('A')->setWidth(100);
-                $sheet->getColumnDimension('B')->setWidth(40);
+                $sheet->getColumnDimension('A')->setWidth(40);
+                $sheet->getColumnDimension('B')->setWidth(100);
+                $sheet->getColumnDimension('C')->setWidth(40);
 
                 $sheet->getStyle('B')->getNumberFormat()
-                ->setFormatCode(\PhpOffice\PhpSpreadsheet\Style\NumberFormat::FORMAT_TEXT);
+                    ->setFormatCode(\PhpOffice\PhpSpreadsheet\Style\NumberFormat::FORMAT_TEXT);
 
 
                 // Apply borders to all cells with content
                 $lastRow = $row - 1;
-                $sheet->getStyle("A1:B{$lastRow}")->getBorders()->getAllBorders()
+                $sheet->getStyle("A1:C{$lastRow}")->getBorders()->getAllBorders()
                     ->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN);
             },
         ];

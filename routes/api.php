@@ -78,18 +78,27 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     //Form Controller
     Route::put('form-history-archived/{id}', [FormHistoriesController::class, 'archived'])->middleware(['abilities:form-management:crud']);
-    Route::resource("forms-history", FormHistoriesController::class)->middleware(['abilities:form-management:crud']);
+
+    Route::get('forms-history', [FormHistoriesController::class, 'index']);
+    // Protected routes (create, store, edit, update, destroy)
+    Route::middleware(['abilities:form-management:crud'])->group(function () {
+        Route::resource('forms-history', FormHistoriesController::class)->except(['index']);
+    });;
 
     //Locations Controller
     Route::put('target-location-archived/{id}', [TargetLocationController::class, 'archived'])->middleware(['abilities:target-locations:crud']);
     Route::patch('target-location-finalized/{id}', [TargetLocationController::class, 'finalized'])->middleware(['abilities:target-locations:crud']);
     Route::patch('target-location-end-survey/{id}', [TargetLocationController::class, 'endSurvey'])->middleware(['abilities:target-locations:crud']);
 
+    // Public routes: show and index (if you want index public too)
     Route::get('target-locations/{target_location}', [TargetLocationController::class, 'show']);
-    // Protected resource routes (CRUD operations require middleware)
+    Route::get('target-locations', [TargetLocationController::class, 'index']);
+
+    // Protected routes (create, store, edit, update)
     Route::middleware(['abilities:target-locations:crud'])->group(function () {
-        Route::resource('target-locations', TargetLocationController::class)->except(['show']);
+        Route::resource('target-locations', TargetLocationController::class)->except(['show', 'index']);
     });
+
 
     // auth controller
     Route::patch('changepassword', [AuthController::class, 'changedPassword']);

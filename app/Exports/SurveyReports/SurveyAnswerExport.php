@@ -198,7 +198,7 @@ class SurveyAnswerExport implements FromCollection, WithMapping, WithHeadings, W
                             $sheet->setCellValue("B{$row}", $qa['question']);
                             $value = $qa['answer'];
                             if ((is_numeric($value) && strlen((string) $value) > 11) || str_starts_with($value, '+')) {
-                                $sheet->setCellValueExplicit("B{$row}", (string) $value, DataType::TYPE_STRING);
+                                $sheet->setCellValueExplicit("C{$row}", (string) $value, DataType::TYPE_STRING);
                             } else {
                                 $sheet->setCellValue("C{$row}", $value);
                             }
@@ -220,7 +220,7 @@ class SurveyAnswerExport implements FromCollection, WithMapping, WithHeadings, W
                 $sheet->getColumnDimension('B')->setWidth(100);
                 $sheet->getColumnDimension('C')->setWidth(40);
 
-                $sheet->getStyle('B')->getNumberFormat()
+                $sheet->getStyle('C')->getNumberFormat()
                     ->setFormatCode(\PhpOffice\PhpSpreadsheet\Style\NumberFormat::FORMAT_TEXT);
 
 

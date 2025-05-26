@@ -121,11 +121,10 @@ class User extends Authenticatable
             'id',
             'id'
         )
-        ->withPivot('response_limit', 'is_done')
-        ->wherePivot('is_done', false)
-        ->where('is_final', true)
-        ->where('start_date', '<', Carbon::now());
-
+            ->withPivot('response_limit', 'is_done')
+            ->wherePivot('is_done', false)
+            ->where('is_final', true)
+            ->where('start_date', '<', Carbon::now());
     }
 
     public function target_locations_users_history()
@@ -159,6 +158,5 @@ class User extends Authenticatable
             ->where('is_done', 0)
             ->withTrashed()
             ->where('start_date', '<', Carbon::now());;
-
     }
 }

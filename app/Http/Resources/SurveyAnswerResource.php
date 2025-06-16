@@ -27,7 +27,7 @@ class SurveyAnswerResource extends JsonResource
                     $this->target_location->barangay ?? null,
                 ])),
             ],
-            'name' => $this->name,
+            'name' => $this->maskName($this->name),
             'age' => $this->age,
             'gender' => $this->gender,
             'address' => $this->address,
@@ -54,5 +54,19 @@ class SurveyAnswerResource extends JsonResource
             'updated_at' => $this->updated_at,
             'deleted_at' => $this->deleted_at
         ];
+    }
+
+    private function maskName($fullName)
+    {
+        $parts = explode(' ', $fullName);
+        $masked = [];
+
+        foreach ($parts as $part) {
+            if (strlen($part) > 0) {
+                $masked[] = substr($part, 0, 1) . str_repeat('*', strlen($part) - 1);
+            }
+        }
+
+        return implode(' ', $masked);
     }
 }

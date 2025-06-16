@@ -135,19 +135,31 @@ class ResponseClassDE implements FromCollection, WithMapping, WithHeadings, With
     {
         return [
             AfterSheet::class => function (AfterSheet $event) {
-                $sheet = $event->sheet;
-                $row = 2; // Start from row 2 (after headers)
 
-                // Set column headers
+                $maskName = function ($fullName) {
+                    $parts = explode(' ', $fullName);
+                    $masked = [];
+
+                    foreach ($parts as $part) {
+                        if (strlen($part) > 0) {
+                            $masked[] = substr($part, 0, 1) . str_repeat('*', strlen($part) - 1);
+                        }
+                    }
+
+                    return implode(' ', $masked);
+                };
+
+                $sheet = $event->sheet;
+                $row = 2;
+
+                // Set headers
                 $sheet->setCellValue('A1', 'Question');
                 $sheet->setCellValue('B1', 'Answers');
                 $sheet->setCellValue('C1', 'Count');
 
-                // Get the transformed data
                 $sections = $this->collection();
 
                 foreach ($sections as $section) {
-                    // Write section header
                     $sheet->setCellValue("A{$row}", "# Section: {$section['section']}");
                     $sheet->mergeCells("A{$row}:C{$row}");
                     $sheet->getStyle("A{$row}")->applyFromArray([
@@ -160,51 +172,37 @@ class ResponseClassDE implements FromCollection, WithMapping, WithHeadings, With
                     $row++;
 
                     foreach ($section['questions'] as $question) {
-                        // Write question
                         $sheet->setCellValue("A{$row}", $question['question']);
                         $sheet->getStyle("A{$row}")->getFont()->setBold(true)
-                            ->setName('Century Gothic')
-                            ->setSize(10);
+                            ->setName('Century Gothic')->setSize(10);
                         $sheet->mergeCells("A{$row}:C{$row}");
                         $row++;
 
-                        // Write answers
-                        // Write answers
                         foreach ($question['answers'] as $answer) {
-                            // Format the cell as text BEFORE setting the value
                             $sheet->getStyle("B{$row}")->getNumberFormat()
                                 ->setFormatCode(\PhpOffice\PhpSpreadsheet\Style\NumberFormat::FORMAT_TEXT);
 
-                            // Force the value to be treated as a string (no apostrophe shown in Excel)
-                            $sheet->setCellValueExplicit("B{$row}", $answer['answer'], \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
+                            $answerText = strtolower($question['question']) === 'name'
+                                ? $maskName($answer['answer'])
+                                : $answer['answer'];
 
-                            $sheet->getStyle("B{$row}")->getFont()
-                                ->setName('Century Gothic')
-                                ->setSize(9);
-
+                            $sheet->setCellValueExplicit("B{$row}", $answerText, \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
+                            $sheet->getStyle("B{$row}")->getFont()->setName('Century Gothic')->setSize(9);
                             $sheet->setCellValue("C{$row}", $answer['count']);
-                            $sheet->getStyle("C{$row}")->getFont()
-                                ->setName('Century Gothic')
-                                ->setSize(9);
+                            $sheet->getStyle("C{$row}")->getFont()->setName('Century Gothic')->setSize(9);
 
                             $row++;
                         }
 
-                        // Add empty row between questions
                         $row++;
                     }
                 }
 
-                // Set column widths
                 $sheet->getColumnDimension('A')->setWidth(50);
                 $sheet->getColumnDimension('B')->setWidth(30);
                 $sheet->getColumnDimension('C')->setWidth(15);
-
-                $sheet->getStyle('B')->getNumberFormat()
-                    ->setFormatCode(\PhpOffice\PhpSpreadsheet\Style\NumberFormat::FORMAT_TEXT);
-
-                // Apply borders to all cells with content
                 $lastRow = $row - 1;
+
                 $sheet->getStyle("A1:C{$lastRow}")->getBorders()->getAllBorders()
                     ->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN);
             },

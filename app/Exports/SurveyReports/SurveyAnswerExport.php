@@ -160,7 +160,27 @@ class SurveyAnswerExport implements FromCollection, WithMapping, WithHeadings, W
                 foreach ($dates as $dateGroup) {
                     // Write Date header
                     $date = (new \DateTime($dateGroup['date']))->format('F d, Y'); // Converts to "May 04, 2024"
-                    $sheet->setCellValue("A{$row}", "{$dateGroup['name']}");
+                    // $sheet->setCellValue("A{$row}", "{$dateGroup['name']}");
+                    $name = $dateGroup['name'];
+                    $words = explode(' ', $name);
+                    $masked = array_map(function ($word) {
+                        $letters = mb_str_split($word);
+                        $obfuscated = '';
+
+                        foreach ($letters as $i => $char) {
+                            if ($i == 0) {
+                                $obfuscated .= strtoupper($char);
+                            } elseif ($i == 2 && strtolower($char) === 'a') {
+                                $obfuscated .= '@';
+                            } else {
+                                $obfuscated .= '*';
+                            }
+                        }
+
+                        return $obfuscated;
+                    }, $words);
+
+                    $sheet->setCellValue("A{$row}", implode(' ', $masked));
                     $sheet->setCellValue("B{$row}", "Date: {$date}");
                     $sheet->mergeCells("B{$row}:C{$row}");
                     // design for name
@@ -197,11 +217,38 @@ class SurveyAnswerExport implements FromCollection, WithMapping, WithHeadings, W
                         foreach ($section['questions'] as $qa) {
                             $sheet->setCellValue("B{$row}", $qa['question']);
                             $value = $qa['answer'];
+
+                            // Check if the question is "Name"
+                            if (strtolower(trim($qa['question'])) === 'name') {
+                                $name = $value;
+                                $words = explode(' ', $name);
+                                $masked = array_map(function ($word) {
+                                    $letters = mb_str_split($word);
+                                    $obfuscated = '';
+
+                                    foreach ($letters as $i => $char) {
+                                        if ($i == 0) {
+                                            $obfuscated .= strtoupper($char);
+                                        } elseif ($i == 2 && strtolower($char) === 'a') {
+                                            $obfuscated .= '@';
+                                        } else {
+                                            $obfuscated .= '*';
+                                        }
+                                    }
+
+                                    return $obfuscated;
+                                }, $words);
+
+                                $value = implode(' ', $masked); // Set obfuscated value
+                            }
+
+                            // Check if value is a long number or phone
                             if ((is_numeric($value) && strlen((string) $value) > 11) || str_starts_with($value, '+')) {
                                 $sheet->setCellValueExplicit("C{$row}", (string) $value, DataType::TYPE_STRING);
                             } else {
                                 $sheet->setCellValue("C{$row}", $value);
                             }
+
                             $sheet->getStyle("A{$row}:C{$row}")->getFont()->setName('Century Gothic')->setSize(10);
                             $row++;
                         }

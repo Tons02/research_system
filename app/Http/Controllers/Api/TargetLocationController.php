@@ -413,4 +413,35 @@ class TargetLocationController extends Controller
 
         return null; // Return null instead of the full response
     }
+
+    public function skipCountdown(Request $request, $id)
+    {
+        DB::beginTransaction();
+
+        try {
+            $target_location = TargetLocation::where('id', $id)
+                ->where('is_final', '1')
+                ->first();
+            $today = Carbon::now();
+            $TodayDate = $today->format('Y-m-d H:i:s');
+
+            if (!$target_location) {
+                return $this->responseUnprocessable('', 'Invalid ID provided for skip countdown. Please check the ID and try again.');
+            }
+
+            if ($TodayDate >= $target_location->start_date) {
+                return $this->responseUnprocessable('', 'The survey countdown for this location has already started.');
+            }
+
+            $target_location->update([
+                'start_date' => $TodayDate,
+            ]);
+
+            DB::commit();
+            return $this->responseSuccess('Target Location successfully started', $target_location);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return $this->responseServerError('Network Error Please Try Again');
+        }
+    }
 }

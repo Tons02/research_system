@@ -89,6 +89,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::put('target-location-archived/{id}', [TargetLocationController::class, 'archived'])->middleware(['abilities:target-locations:crud']);
     Route::patch('target-location-finalized/{id}', [TargetLocationController::class, 'finalized'])->middleware(['abilities:target-locations:crud']);
     Route::patch('target-location-end-survey/{id}', [TargetLocationController::class, 'endSurvey'])->middleware(['abilities:target-locations:crud']);
+    Route::patch('target-location-skip-countdown/{id}', [TargetLocationController::class, 'skipCountdown'])->middleware(['abilities:target-locations:crud']);
 
     // Public routes: show and index (if you want index public too)
     Route::get('target-locations/{target_location}', [TargetLocationController::class, 'show']);

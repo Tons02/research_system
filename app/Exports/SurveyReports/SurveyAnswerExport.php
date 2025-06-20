@@ -139,34 +139,51 @@ class SurveyAnswerExport implements FromCollection, WithMapping, WithHeadings, W
         return [
             AfterSheet::class => function (AfterSheet $event) {
                 $sheet = $event->sheet;
-                $row = 2; // Start from row 2 (after headers)
 
-                // Set column headers
+                // Set headers
                 $sheet->setCellValue('A1', 'Name');
-                $sheet->setCellValue('B1', 'Question');
-                $sheet->setCellValue('C1', 'Answer');
+                $sheet->setCellValue('B1', 'Survey ID');
+                $sheet->setCellValue('C1', 'Date');
+                $sheet->setCellValue('D1', 'Section');
+                $sheet->setCellValue('E1', 'Question');
+                $sheet->setCellValue('F1', 'Answer');
 
-                $sheet->getStyle("A1:C1")->applyFromArray([
+                // Style headers
+                $sheet->getStyle("A1:F1")->applyFromArray([
                     'font' => ['bold' => true, 'size' => 12, 'name' => 'Century Gothic'],
                     'fill' => [
-                        'fillType' => Fill::FILL_SOLID,
+                        'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
                         'startColor' => ['argb' => 'FFD9D9D9']
                     ]
                 ]);
 
+                // Start writing from row 2
                 $row = 2;
 
-                $dates = $this->collection(); // This now returns a structure grouped by date
-                foreach ($dates as $dateGroup) {
-                    // Write Date header
-                    $date = (new \DateTime($dateGroup['date']))->format('F d, Y'); // Converts to "May 04, 2024"
-                    // $sheet->setCellValue("A{$row}", "{$dateGroup['name']}");
-                    $name = $dateGroup['name'];
-                    $words = explode(' ', $name);
-                    $masked = array_map(function ($word) {
+                // Define alternating colors
+                $colors = ['DCE6F1', 'DFFFD6'];
+                $previousSurveyId = null;
+                $currentColorIndex = 0;
+
+                // Your data collection
+                $respondents = $this->collection();
+
+                foreach ($respondents as $respondent) {
+                    $surveyId = $respondent['survey_id'];
+
+                    // Alternate background color if survey ID changes
+                    if ($surveyId !== $previousSurveyId) {
+                        $currentColorIndex = 1 - $currentColorIndex;
+                        $previousSurveyId = $surveyId;
+                    }
+
+                    $bgColor = $colors[$currentColorIndex];
+
+                    // Mask the name
+                    $name = $respondent['name'];
+                    $maskedName = implode(' ', array_map(function ($word) {
                         $letters = mb_str_split($word);
                         $obfuscated = '';
-
                         foreach ($letters as $i => $char) {
                             if ($i == 0) {
                                 $obfuscated .= strtoupper($char);
@@ -176,104 +193,59 @@ class SurveyAnswerExport implements FromCollection, WithMapping, WithHeadings, W
                                 $obfuscated .= '*';
                             }
                         }
-
                         return $obfuscated;
-                    }, $words);
+                    }, explode(' ', $name)));
 
-                    $sheet->setCellValue("A{$row}", implode(' ', $masked));
-                    $sheet->setCellValue("B{$row}", "Date: {$date}");
-                    $sheet->mergeCells("B{$row}:C{$row}");
-                    // design for name
-                    $sheet->getStyle("A{$row}")->applyFromArray([
-                        'font' => ['bold' => true, 'size' => 13, 'name' => 'Century Gothic'],
-                        'fill' => [
-                            'fillType' => Fill::FILL_SOLID,
-                            'startColor' => ['argb' => 'FFB4C6E7'] // Optional: Light blue background
-                        ]
-                    ]);
-
-                    $sheet->getStyle("B{$row}")->applyFromArray([
-                        'font' => ['bold' => true, 'size' => 13, 'name' => 'Century Gothic'],
-                        'fill' => [
-                            'fillType' => Fill::FILL_SOLID,
-                            'startColor' => ['argb' => 'FFCCCCFF']
-                        ]
-                    ]);
-                    $row++;
-
-                    foreach ($dateGroup['sections'] as $section) {
-                        // Write Section
-                        $sheet->setCellValue("B{$row}", "Section: {$section['section']}");
-                        $sheet->mergeCells("B{$row}:C{$row}");
-                        $sheet->getStyle("B{$row}")->applyFromArray([
-                            'font' => ['bold' => true, 'size' => 12, 'name' => 'Century Gothic'],
-                            'fill' => [
-                                'fillType' => Fill::FILL_SOLID,
-                                'startColor' => ['argb' => 'FFE6E6E6']
-                            ]
-                        ]);
-                        $row++;
-
+                    // Loop through sections and questions
+                    foreach ($respondent['sections'] as $section) {
                         foreach ($section['questions'] as $qa) {
-                            $sheet->setCellValue("B{$row}", $qa['question']);
-                            $value = $qa['answer'];
+                            $question = $qa['question'];
+                            $answer = $qa['answer'];
 
-                            // Check if the question is "Name"
-                            if (strtolower(trim($qa['question'])) === 'name') {
-                                $name = $value;
-                                $words = explode(' ', $name);
-                                $masked = array_map(function ($word) {
-                                    $letters = mb_str_split($word);
-                                    $obfuscated = '';
-
-                                    foreach ($letters as $i => $char) {
-                                        if ($i == 0) {
-                                            $obfuscated .= strtoupper($char);
-                                        } elseif ($i == 2 && strtolower($char) === 'a') {
-                                            $obfuscated .= '@';
-                                        } else {
-                                            $obfuscated .= '*';
-                                        }
-                                    }
-
-                                    return $obfuscated;
-                                }, $words);
-
-                                $value = implode(' ', $masked); // Set obfuscated value
+                            // Obfuscate Name answer
+                            if (strtolower(trim($question)) === 'name') {
+                                $answer = $maskedName;
                             }
 
-                            // Check if value is a long number or phone
-                            if ((is_numeric($value) && strlen((string) $value) > 11) || str_starts_with($value, '+')) {
-                                $sheet->setCellValueExplicit("C{$row}", (string) $value, DataType::TYPE_STRING);
+                            // Set each row
+                            $sheet->setCellValue("A{$row}", $maskedName);
+                            $sheet->setCellValue("B{$row}", $surveyId);
+                            $sheet->setCellValue("C{$row}", $respondent['date']);
+                            $sheet->setCellValue("D{$row}", $section['section']);
+                            $sheet->setCellValue("E{$row}", $question);
+
+                            // Phone number formatting
+                            if ((is_numeric($answer) && strlen((string)$answer) > 11) || str_starts_with($answer, '+')) {
+                                $sheet->setCellValueExplicit("F{$row}", (string) $answer, \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
                             } else {
-                                $sheet->setCellValue("C{$row}", $value);
+                                $sheet->setCellValue("F{$row}", $answer);
                             }
 
-                            $sheet->getStyle("A{$row}:C{$row}")->getFont()->setName('Century Gothic')->setSize(10);
+                            // Apply styles
+                            $sheet->getStyle("A{$row}:F{$row}")->applyFromArray([
+                                'font' => ['name' => 'Century Gothic', 'size' => 10],
+                                'fill' => [
+                                    'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
+                                    'startColor' => ['argb' => $bgColor]
+                                ]
+                            ]);
+
                             $row++;
                         }
-
-                        // Optional space after each section
-                        $row++;
                     }
-
-                    // Optional space after each date
-                    $row++;
                 }
 
-
                 // Set column widths
-                $sheet->getColumnDimension('A')->setWidth(40);
-                $sheet->getColumnDimension('B')->setWidth(100);
-                $sheet->getColumnDimension('C')->setWidth(40);
+                $sheet->getColumnDimension('A')->setWidth(25);
+                $sheet->getColumnDimension('B')->setWidth(12);
+                $sheet->getColumnDimension('C')->setWidth(20);
+                $sheet->getColumnDimension('D')->setWidth(20);
+                $sheet->getColumnDimension('E')->setWidth(110);
+                $sheet->getColumnDimension('F')->setWidth(40);
 
-                $sheet->getStyle('C')->getNumberFormat()
-                    ->setFormatCode(\PhpOffice\PhpSpreadsheet\Style\NumberFormat::FORMAT_TEXT);
-
-
-                // Apply borders to all cells with content
+                // Border styling for all cells with data
                 $lastRow = $row - 1;
-                $sheet->getStyle("A1:C{$lastRow}")->getBorders()->getAllBorders()
+                $sheet->getStyle("A1:F{$lastRow}")->getBorders()->getAllBorders()
                     ->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN);
             },
         ];

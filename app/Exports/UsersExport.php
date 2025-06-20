@@ -17,8 +17,8 @@ use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 class UsersExport implements FromCollection, WithHeadings, WithMapping, WithStyles, ShouldAutoSize, WithEvents
 {
     /**
-    * @return \Illuminate\Support\Collection
-    */
+     * @return \Illuminate\Support\Collection
+     */
 
     protected $status;
 
@@ -41,7 +41,6 @@ class UsersExport implements FromCollection, WithHeadings, WithMapping, WithStyl
         ])->when($this->status === "inactive", function ($query) {
             $query->onlyTrashed();
         })->get();
-
     }
 
     public function headings(): array
@@ -49,10 +48,23 @@ class UsersExport implements FromCollection, WithHeadings, WithMapping, WithStyl
         return [
             ["{$this->status} Locus Users"],
             [
-                'ID', 'ID PREFIX', 'ID NO', 'First Name', 'Last Name',
-                'Mobile Number', 'Gender', 'Company', 'Business Unit',
-                'Department', 'Unit', 'Sub Unit', 'Location',
-                'Username', 'Role', 'Created At', 'Status'
+                'ID',
+                'ID PREFIX',
+                'ID NO',
+                'First Name',
+                'Last Name',
+                'Mobile Number',
+                'Gender',
+                'Company',
+                'Business Unit',
+                'Department',
+                'Unit',
+                'Sub Unit',
+                'Location',
+                'Username',
+                'Role',
+                'Created At',
+                'Status'
             ]
         ];
     }
@@ -115,7 +127,7 @@ class UsersExport implements FromCollection, WithHeadings, WithMapping, WithStyl
             $user->id_no,
             $user->first_name,
             $user->last_name,
-            " ".$user->mobile_number,
+            " " . $user->mobile_number,
             $user->gender,
             $user->company->company_name,
             $user->business_unit->business_unit_name,

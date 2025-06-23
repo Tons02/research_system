@@ -107,12 +107,12 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::patch('resetpassword/{id}', [AuthController::class, 'resetPassword'])->middleware(['abilities:user-management:user-accounts:crud']);
 
     //Survey Answer Controller
-    Route::put('survey-answer-archived/{id}', [SurveyAnswerController::class, 'archived'])->middleware(['abilities:reports:survey-answer:crud-export']);
-    Route::resource("survey-answers", SurveyAnswerController::class)->middleware(['abilities:reports:survey-answer:crud-export']);
-    Route::get('survey-answer-export', [SurveyAnswerController::class, 'export'])->middleware(['abilities:reports:survey-answer:crud-export']);
+    Route::put('survey-answer-archived/{id}', [SurveyAnswerController::class, 'archived']);
+    Route::resource("survey-answers", SurveyAnswerController::class);
+    Route::get('survey-answer-export', [SurveyAnswerController::class, 'export']);
 
     //Question Answers Controller
-    Route::resource("question-answers", QuestionAnswerController::class)->middleware(['abilities:question-answer:crud']);
+    Route::resource("question-answers", QuestionAnswerController::class);
 
     // //Vehicle Count Controller
     // Route::put('vehicle-count-archived/{id}', [VehicleCountController::class, 'archived'])->middleware(['abilities:reports:vehicle-count:crud-export']);

@@ -114,13 +114,24 @@ Route::middleware(['auth:sanctum'])->group(function () {
     //Question Answers Controller
     Route::resource("question-answers", QuestionAnswerController::class)->middleware(['abilities:question-answer:crud']);
 
+    // //Vehicle Count Controller
+    // Route::put('vehicle-count-archived/{id}', [VehicleCountController::class, 'archived'])->middleware(['abilities:reports:vehicle-count:crud-export']);
+    // Route::get('vehicle-count-export', [VehicleCountController::class, 'export'])->middleware(['abilities:reports:vehicle-count:crud-export']);
+    // Route::resource("vehicle-counts", VehicleCountController::class)->middleware(['abilities:reports:vehicle-count:crud-export']);
+
+    // //Foot Count Controller
+    // Route::put('foot-count-archived/{id}', [FootCountController::class, 'archived'])->middleware(['abilities:reports:foot-count:crud-export']);
+    // Route::get('foot-count-export', [FootCountController::class, 'export'])->middleware(['abilities:reports:foot-count:crud-export']);
+    // Route::resource("foot-counts", FootCountController::class)->middleware(['abilities:reports:foot-count:crud-export']);
+
+    // make the api public
     //Vehicle Count Controller
-    Route::put('vehicle-count-archived/{id}', [VehicleCountController::class, 'archived'])->middleware(['abilities:reports:vehicle-count:crud-export']);
-    Route::get('vehicle-count-export', [VehicleCountController::class, 'export'])->middleware(['abilities:reports:vehicle-count:crud-export']);
-    Route::resource("vehicle-counts", VehicleCountController::class)->middleware(['abilities:reports:vehicle-count:crud-export']);
+    Route::put('vehicle-count-archived/{id}', [VehicleCountController::class, 'archived']);
+    Route::get('vehicle-count-export', [VehicleCountController::class, 'export']);
+    Route::resource("vehicle-counts", VehicleCountController::class);
 
     //Foot Count Controller
-    Route::put('foot-count-archived/{id}', [FootCountController::class, 'archived'])->middleware(['abilities:reports:foot-count:crud-export']);
-    Route::get('foot-count-export', [FootCountController::class, 'export'])->middleware(['abilities:reports:foot-count:crud-export']);
-    Route::resource("foot-counts", FootCountController::class)->middleware(['abilities:reports:foot-count:crud-export']);
+    Route::put('foot-count-archived/{id}', [FootCountController::class, 'archived']);
+    Route::get('foot-count-export', [FootCountController::class, 'export']);
+    Route::resource("foot-counts", FootCountController::class);
 });

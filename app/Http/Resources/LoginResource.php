@@ -78,6 +78,7 @@ class LoginResource extends JsonResource
                 return [
                     'target_location_id' => $vehicle_counted->id,
                     'form_history' => $vehicle_counted->form_history_id,
+                    'title' => $vehicle_counted->title,
                     'target_location' => implode(', ', array_filter([
                         $vehicle_counted->region,
                         $vehicle_counted->province,
@@ -93,6 +94,7 @@ class LoginResource extends JsonResource
                 return [
                     'target_location_id' => $foot_counted->id,
                     'form_history' => $foot_counted->form_history_id,
+                    'title' => $foot_counted->title,
                     'target_location' => implode(', ', array_filter([
                         $foot_counted->region,
                         $foot_counted->province,

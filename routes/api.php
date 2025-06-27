@@ -93,6 +93,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     // Public routes: show and index (if you want index public too)
     Route::get('target-locations/{target_location}', [TargetLocationController::class, 'show']);
+    Route::get('target-locations-users', [TargetLocationController::class, 'target_location_users']);
     Route::get('target-locations', [TargetLocationController::class, 'index']);
 
     // Protected routes (create, store, edit, update)

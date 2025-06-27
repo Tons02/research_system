@@ -444,4 +444,11 @@ class TargetLocationController extends Controller
             return $this->responseServerError('Network Error Please Try Again');
         }
     }
+
+    public function target_location_users(Request $request)
+    {
+        $target_location_id = $request->query('target_location_id');
+        $target_location_users =  TargetLocation::with('target_locations_users', 'vehicle_counted_by_user', 'foot_counted_by_user')->where('id', $target_location_id)->get();
+        return $this->responseSuccess('User for specific Target Location display successfully', $target_location_users);
+    }
 }

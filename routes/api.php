@@ -3,13 +3,7 @@
 use App\Http\Controllers\Api\Auth\AuthController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Api\CompanyController;
-use App\Http\Controllers\Api\BusinessUnitController;
-use App\Http\Controllers\Api\DepartmentController;
 use App\Http\Controllers\Api\FootCountController;
-use App\Http\Controllers\Api\UnitController;
-use App\Http\Controllers\Api\SubUnitController;
-use App\Http\Controllers\Api\LocationController;
 use App\Http\Controllers\Api\RoleController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\FormController;
@@ -53,14 +47,6 @@ Route::post('login', [AuthController::class, 'login']);
 // Route::patch('resetpassword/{id}', [AuthController::class, 'resetPassword'])->middleware(['abilities:user-management:user-accounts:crud']);
 
 Route::middleware(['auth:sanctum'])->group(function () {
-
-    // ymir coa
-    Route::resource("companies", CompanyController::class)->middleware(['abilities:masterlist:companies:sync']);
-    Route::resource("business-units", BusinessUnitController::class)->middleware(['abilities:masterlist:business-units:sync']);
-    Route::resource("departments", DepartmentController::class)->middleware(['abilities:masterlist:departments:sync']);
-    Route::resource("units", UnitController::class)->middleware(['abilities:masterlist:units:sync']);
-    Route::resource("sub-units", SubUnitController::class)->middleware(['abilities:masterlist:sub-units:sync']);
-    Route::resource("locations", LocationController::class)->middleware(['abilities:masterlist:locations:sync']);
 
     Route::resource("one-charging", OneChargingController::class)->middleware(['abilities:masterlist:one-charging:sync']);
 

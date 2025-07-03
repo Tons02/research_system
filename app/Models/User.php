@@ -10,12 +10,6 @@ use Illuminate\Database\Eloquent\softDeletes;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use App\Models\Companies;
-use App\Models\BusinessUnit;
-use App\Models\Department;
-use App\Models\Unit;
-use App\Models\SubUnit;
-use App\Models\Location;
 use App\Models\Role;
 use Illuminate\Support\Carbon;
 

@@ -145,12 +145,7 @@ class UserController extends Controller
             "mobile_number" => $request["personal_info"]["mobile_number"],
             "gender" => $request["personal_info"]["gender"],
 
-            "company_id" => $request["personal_info"]["company_id"],
-            "business_unit_id" => $request["personal_info"]["business_unit_id"],
-            "department_id" => $request["personal_info"]["department_id"],
-            "unit_id" => $request["personal_info"]["unit_id"],
-            "sub_unit_id" => $request["personal_info"]["sub_unit_id"],
-            "location_id" => $request["personal_info"]["location_id"],
+            "one_charging_sync_id" => $request["personal_info"]["one_charging_sync_id"],
 
             "username" => $request["username"],
             "password" => $request["username"],
@@ -170,12 +165,7 @@ class UserController extends Controller
         }
 
         $userID->mobile_number = $request["personal_info"]["mobile_number"];
-        $userID->company_id = $request["personal_info"]["company_id"];
-        $userID->business_unit_id = $request["personal_info"]["business_unit_id"];
-        $userID->department_id = $request["personal_info"]["department_id"];
-        $userID->unit_id = $request["personal_info"]["unit_id"];
-        $userID->sub_unit_id = $request["personal_info"]["sub_unit_id"];
-        $userID->location_id = $request["personal_info"]["location_id"];
+        $userID->one_charging_sync_id = $request["personal_info"]["one_charging_sync_id"];
         $userID->username = $request['username'];
         $userID->role_id = $request['role_id'];
 

@@ -38,15 +38,9 @@ class RoleRequest extends FormRequest
                 function ($attribute, $value, $fail) {
                     $allowedValues = [
                         "masterlist",
-                        "masterlist:companies:sync",
-                        "masterlist:business-units:sync",
-                        "masterlist:departments:sync",
-                        "masterlist:units:sync",
-                        "masterlist:sub-units:sync",
-                        "masterlist:locations:sync",
-                        "user-management",
-                        "user-management:user-accounts:crud",
-                        "user-management:role-management:crud",
+                        "masterlist:one-charging:sync",
+                        "masterlist:user-accounts:crud",
+                        "masterlist:role-management:crud",
                         "form-management:crud",
                         "target-locations:crud",
                         "reports:survey-answer:crud-export",

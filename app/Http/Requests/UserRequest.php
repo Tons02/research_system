@@ -36,43 +36,13 @@ class UserRequest extends FormRequest
                 "regex:/^\+63\d{10}$/",
             ],
             "personal_info.gender" => "sometimes|required|in:male,female",
-            "personal_info.company_id" => ["required","exists:companies,sync_id"],
-            'personal_info.business_unit_id' => [
-                'required',
-                Rule::exists('business_units', 'sync_id')->where(function ($query) {
-                    $query->where('company_id', $this->input('personal_info.company_id'));
-                }),
-            ],
-            "personal_info.department_id" =>[
-                'required',
-                Rule::exists('departments', 'sync_id')->where(function ($query) {
-                    $query->where('business_unit_id', $this->input('personal_info.business_unit_id'));
-                }),
-            ],
-            "personal_info.unit_id" => [
-                'required',
-                Rule::exists('units', 'sync_id')->where(function ($query) {
-                    $query->where('department_id', $this->input('personal_info.department_id'));
-                }),
-            ],
-            "personal_info.sub_unit_id" => [
-                'required',
-                Rule::exists('sub_units', 'sync_id')->where(function ($query) {
-                    $query->where('unit_id', $this->input('personal_info.unit_id'));
-                }),
-            ],
-            "personal_info.location_id" => [
-                'required',
-                Rule::exists('locations_sub_unit', 'location_id')->where(function ($query) {
-                    $query->where('sub_unit_id', $this->input('personal_info.sub_unit_id'));
-                }),
-            ],
+            "personal_info.one_charging_sync_id" => ["required", "exists:one_chargings,sync_id"],
             "username" => [
                 "required",
                 "unique:users,username," . $this->route()->user,
             ],
 
-            "role_id" => ["required","exists:roles,id"],
+            "role_id" => ["required", "exists:roles,id"],
         ];
     }
 
@@ -97,7 +67,7 @@ class UserRequest extends FormRequest
             "personal_info.department_id.exists" => "The selected department is invalid or does not belong to the selected business unit.",
             "personal_info.unit_id.required" => "The unit field is required.",
             "personal_info.unit_id.exists" => "The selected unit is invalid or does not belong to the selected department.",
-             "personal_info.sub_unit_id.required" => "The sub unit field is required.",
+            "personal_info.sub_unit_id.required" => "The sub unit field is required.",
             "personal_info.sub_unit_id.exists" => "The selected sub unit is invalid or does not belong to the selected unit.",
 
             "personal_info.location_id.required" => "The location field is required.",

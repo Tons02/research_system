@@ -23,30 +23,7 @@ class UserResource extends JsonResource
             'last_name' => $this->last_name,
             'mobile_number' => $this->mobile_number,
             'gender' => $this->gender,
-            'company' => [
-                'sync_id' => $this->company->sync_id,
-                'name' => $this->company->company_name
-            ],
-            'business_unit' => [
-                'sync_id' => $this->business_unit->sync_id,
-                'name' => $this->business_unit->business_unit_name
-            ],
-            'department' => [
-                'sync_id' => $this->department->sync_id,
-                'name' => $this->department->department_name
-            ],
-            'unit' => [
-                'sync_id' => $this->unit->sync_id,
-                'name' => $this->unit->unit_name
-            ],
-            'sub_unit' => [
-                'sync_id' => $this->sub_unit->sync_id,
-                'name' => $this->sub_unit->sub_unit_name
-            ],
-            'location' => [
-                'sync_id' => $this->location->sync_id,
-                'name' => $this->location->location_name
-            ],
+            'one_charging' => $this->one_charging,
             'username' => $this->username,
             'role' => [
                 'id' => $this->role->id,
@@ -57,11 +34,11 @@ class UserResource extends JsonResource
                 return [
                     'id' => $surveyor->id,
                     'target_location' => implode(', ', array_filter([
-                    $surveyor->region,
-                    $surveyor->province,
-                    $surveyor->city_municipality,
-                    $surveyor->sub_municipality,
-                    $surveyor->barangay
+                        $surveyor->region,
+                        $surveyor->province,
+                        $surveyor->city_municipality,
+                        $surveyor->sub_municipality,
+                        $surveyor->barangay
                     ])),
                     'bound_box' => $surveyor->bound_box,
                     'total_response_limit' => $surveyor->response_limit,

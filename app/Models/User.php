@@ -37,12 +37,7 @@ class User extends Authenticatable
         'last_name',
         'mobile_number',
         'gender',
-        'company_id',
-        'business_unit_id',
-        'department_id',
-        'unit_id',
-        'sub_unit_id',
-        'location_id',
+        'one_charging_sync_id',
         'username',
         'password',
         'role_id',
@@ -74,35 +69,9 @@ class User extends Authenticatable
 
     protected string $default_filters = UserFilter::class;
 
-    public function company()
+    public function one_charging()
     {
-        return $this->belongsTo(Companies::class, 'company_id', 'sync_id')->withTrashed();
-    }
-
-    public function business_unit()
-    {
-        return $this->belongsTo(BusinessUnit::class, 'business_unit_id', 'sync_id')->withTrashed();
-    }
-
-    public function department()
-    {
-        return $this->belongsTo(Department::class, 'department_id', 'sync_id')->withTrashed();
-    }
-
-    public function unit()
-    {
-        return $this->belongsTo(Unit::class, 'unit_id', 'sync_id', 'sync_id')->withTrashed();
-    }
-
-    public function sub_unit()
-    {
-        return $this->belongsTo(SubUnit::class, 'sub_unit_id', 'sync_id')->withTrashed();
-    }
-
-
-    public function location()
-    {
-        return $this->belongsTo(Location::class, 'location_id', 'sync_id')->withTrashed();
+        return $this->belongsTo(OneCharging::class, 'one_charging_sync_id', 'sync_id')->withTrashed();
     }
 
 

@@ -14,6 +14,7 @@ use App\Http\Controllers\Api\RoleController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\FormController;
 use App\Http\Controllers\Api\FormHistoriesController;
+use App\Http\Controllers\Api\OneChargingController;
 use App\Http\Controllers\Api\QuestionAnswerController;
 use App\Http\Controllers\Api\SurveyAnswerController;
 use App\Http\Controllers\Api\TargetLocationController;
@@ -35,6 +36,8 @@ Route::post('login', [AuthController::class, 'login']);
 // // User Controller
 // Route::put('user-archived/{id}', [UserController::class, 'archived']);
 // Route::resource("user", UserController::class);
+
+// Route::resource("one-charging", OneChargingController::class);
 
 // //Form Controller
 // Route::put('form-archived/{id}', [FormController::class, 'archived']);
@@ -59,16 +62,18 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::resource("sub-units", SubUnitController::class)->middleware(['abilities:masterlist:sub-units:sync']);
     Route::resource("locations", LocationController::class)->middleware(['abilities:masterlist:locations:sync']);
 
+    Route::resource("one-charging", OneChargingController::class)->middleware(['abilities:masterlist:one-charging:sync']);
+
     // Role Controller
-    Route::put('role-archived/{id}', [RoleController::class, 'archived'])->middleware(['abilities:user-management:role-management:crud']);
-    Route::resource("role", RoleController::class)->middleware(['abilities:user-management:role-management:crud']);
+    Route::put('role-archived/{id}', [RoleController::class, 'archived'])->middleware(['abilities:masterlist:role-management:crud']);
+    Route::resource("role", RoleController::class)->middleware(['abilities:masterlist:role-management:crud']);
 
     // User Controller
-    Route::put('user-archived/{id}', [UserController::class, 'archived'])->middleware(['abilities:user-management:user-accounts:crud']);
-    Route::get('users-export', [UserController::class, 'export'])->middleware(['abilities:user-management:user-accounts:crud']);
+    Route::put('user-archived/{id}', [UserController::class, 'archived'])->middleware(['abilities:masterlist:user-accounts:crud']);
+    Route::get('users-export', [UserController::class, 'export'])->middleware(['abilities:masterlist:user-accounts:crud']);
     Route::get('user', [UserController::class, 'index']);
     // Protected resource routes (CRUD operations require middleware)
-    Route::middleware(['abilities:user-management:user-accounts:crud'])->group(function () {
+    Route::middleware(['abilities:masterlist:user-accounts:crud'])->group(function () {
         Route::resource('user', UserController::class)->except(['index']);
     });
 
@@ -105,7 +110,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     // auth controller
     Route::patch('changepassword', [AuthController::class, 'changedPassword']);
     Route::post('logout', [AuthController::class, 'logout']);
-    Route::patch('resetpassword/{id}', [AuthController::class, 'resetPassword'])->middleware(['abilities:user-management:user-accounts:crud']);
+    Route::patch('resetpassword/{id}', [AuthController::class, 'resetPassword'])->middleware(['abilities:masterlist:user-accounts:crud']);
 
     //Survey Answer Controller
     Route::put('survey-answer-archived/{id}', [SurveyAnswerController::class, 'archived']);
@@ -114,16 +119,6 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     //Question Answers Controller
     Route::resource("question-answers", QuestionAnswerController::class);
-
-    // //Vehicle Count Controller
-    // Route::put('vehicle-count-archived/{id}', [VehicleCountController::class, 'archived'])->middleware(['abilities:reports:vehicle-count:crud-export']);
-    // Route::get('vehicle-count-export', [VehicleCountController::class, 'export'])->middleware(['abilities:reports:vehicle-count:crud-export']);
-    // Route::resource("vehicle-counts", VehicleCountController::class)->middleware(['abilities:reports:vehicle-count:crud-export']);
-
-    // //Foot Count Controller
-    // Route::put('foot-count-archived/{id}', [FootCountController::class, 'archived'])->middleware(['abilities:reports:foot-count:crud-export']);
-    // Route::get('foot-count-export', [FootCountController::class, 'export'])->middleware(['abilities:reports:foot-count:crud-export']);
-    // Route::resource("foot-counts", FootCountController::class)->middleware(['abilities:reports:foot-count:crud-export']);
 
     // make the api public
     //Vehicle Count Controller

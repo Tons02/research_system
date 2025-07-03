@@ -21,43 +21,18 @@ return new class extends Migration
             $table->string('mobile_number')->nullable();
             $table->enum("gender", ["male", "female"]);
 
-            $table->bigInteger('company_id');
-            $table->foreign("company_id")
-            ->references("sync_id")
-            ->on("companies");
-
-            $table->bigInteger('business_unit_id');
-            $table->foreign("business_unit_id")
-            ->references("sync_id")
-            ->on("business_units");
-
-            $table->bigInteger('department_id');
-            $table->foreign("department_id")
-            ->references("sync_id")
-            ->on("departments");
-
-            $table->bigInteger('unit_id');
-            $table->foreign("unit_id")
-            ->references("sync_id")
-            ->on("units");
-
-            $table->unsignedBigInteger('sub_unit_id');
-            $table->foreign("sub_unit_id")
-            ->references("sync_id")
-            ->on("sub_units");
-
-            $table->unsignedBigInteger('location_id');
-            $table->foreign("location_id")
-            ->references("sync_id")
-            ->on("locations");
+            $table->unsignedBigInteger('one_charging_sync_id');
+            $table->foreign("one_charging_sync_id")
+                ->references("sync_id")
+                ->on("one_chargings");
 
             $table->string('username')->unique();
             $table->string('password');
             $table->unsignedInteger("role_id")->index();
 
             $table->foreign("role_id")
-            ->references("id")
-            ->on("roles");
+                ->references("id")
+                ->on("roles");
 
             $table->rememberToken();
             $table->timestamps();

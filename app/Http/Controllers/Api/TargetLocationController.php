@@ -107,9 +107,13 @@ class TargetLocationController extends Controller
             foreach ($request['surveyors'] as $surveyor) {
                 $create_target_location->target_locations_users()->attach(
                     $surveyor['user_id'],
-                    ['response_limit' => $surveyor['response_limit']],
+                    [
+                        'response_limit' => $surveyor['response_limit'],
+                        'is_done' => 0,
+                    ]
                 );
             }
+
             DB::commit();
             return $this->responseCreated('Target Location Successfully Created', $create_target_location);
         } catch (\Exception $e) {

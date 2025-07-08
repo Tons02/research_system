@@ -81,6 +81,11 @@ class SurveyAnswerController extends Controller
             return $this->responseUnprocessable('', 'You cannot take the survey because it is not finalized. Please contact your supervisor or support.');
         }
 
+        //done checker
+        if ($location->is_done == 1) {
+            return $this->responseUnprocessable('', 'You cannot take the survey because it is already marked as done.');
+        }
+
         // Count how many surveys the user has already submitted
         $total_survey_of_surveyor = SurveyAnswer::where('target_location_id', $request["target_location_id"])
             ->where('surveyor_id', $user->id)
@@ -90,17 +95,15 @@ class SurveyAnswerController extends Controller
         $pivotLimit = optional($location->pivot)->response_limit;
         $locationLimit = $location->response_limit;
 
-        // if ($pivotLimit === $locationLimit && $total_survey_of_surveyor > $locationLimit) {
-        //     $target_location = TargetLocation::find($location->id);
+        if ($pivotLimit === $locationLimit && $total_survey_of_surveyor > $locationLimit) {
+            $target_location = TargetLocation::find($location->id);
 
-        //     if (! $target_location) {
-        //         return $this->responseUnprocessable('', 'Invalid ID provided. Please check the ID and try again.');
-        //     }
+            if (! $target_location) {
+                return $this->responseUnprocessable('', 'Invalid ID provided. Please check the ID and try again.');
+            }
 
-        //     // $target_location->update(['is_done' => 1]);
-
-        //     return $this->responseUnprocessable('', 'Survey is done');
-        // }
+            return $this->responseUnprocessable('', 'Survey is done');
+        }
 
 
         if ($total_survey_of_surveyor >= $locationLimit) {
@@ -190,35 +193,17 @@ class SurveyAnswerController extends Controller
                 }
             }
 
-            // $total_survey_of_surveyor_after_creating = SurveyAnswer::where('target_location_id', $request["target_location_id"])
-            //     ->where('surveyor_id', $user->id)
-            //     ->count();
+            $total_survey_of_surveyor_after_creating = SurveyAnswer::where('target_location_id', $request["target_location_id"])
+                ->where('surveyor_id', $user->id)
+                ->count();
 
-            // if ($total_survey_of_surveyor_after_creating === $pivotLimit) {
-            //     // Find the target location pivot record
-            //     $user->target_locations_users()
-            //         ->updateExistingPivot($request["target_location_id"], [
-            //             'is_done' => 1
-            //         ]);
-            // }
-
-            // // For closing the survey
-            // $total_survey_on_location = SurveyAnswer::where('target_location_id', $request["target_location_id"])
-            //     ->count();
-
-            // // Step 2: Check if response limit has been reached globally
-            // if ($total_survey_on_location >= $location->response_limit) {
-            //     $target_location = TargetLocation::find($location->id);
-
-            //     if (! $target_location) {
-            //         return $this->responseUnprocessable('', 'Invalid ID provided. Please check the ID and try again.');
-            //     }
-
-            //     $target_location->update(['is_done' => 1]);
-
-            //     DB::commit();
-            //     return $this->responseCreated('Survey Answer Successfully Synced', '');
-            // }
+            if ($total_survey_of_surveyor_after_creating === $pivotLimit) {
+                // Find the target location pivot record
+                $user->target_locations_users()
+                    ->updateExistingPivot($request["target_location_id"], [
+                        'is_done' => 1
+                    ]);
+            }
 
             DB::commit();
             return $this->responseCreated('Survey Answer Successfully Synced', $create_survey_answer);

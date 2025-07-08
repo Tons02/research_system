@@ -32,5 +32,4 @@ class TargetLocationFilter extends QueryFilters
         }
         return $this;
     }
-
 }

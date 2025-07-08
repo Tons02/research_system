@@ -26,10 +26,20 @@ class TargetLocationController extends Controller
     {
         $status = $request->query('status');
         $pagination = $request->query('pagination');
+        $filter_reports = $request->query('filter_reports');
+        $userId = auth('sanctum')->user()->id;
 
 
         $TargetLocation = TargetLocation::when($status === "inactive", function ($query) {
             $query->onlyTrashed();
+        })->when($filter_reports === "survey_answers", function ($query) use ($userId) {
+            $query->whereHas('target_locations_users', function ($q) use ($userId) {
+                $q->where('user_id', $userId);
+            });
+        })->when($filter_reports === "vehicle_counts", function ($query) use ($userId) {
+            $query->where('vehicle_counted_by_user_id', $userId);
+        })->when($filter_reports === "foot_counts", function ($query) use ($userId) {
+            $query->where('foot_counted_by_user_id', $userId);
         })
             ->orderBy('created_at', 'desc')
             ->useFilters()

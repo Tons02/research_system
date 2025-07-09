@@ -452,7 +452,7 @@ class TargetLocationController extends Controller
             ]);
 
             DB::commit();
-            return $this->responseSuccess('Target Location successfully started', $target_location);
+            return $this->responseSuccess('The survey on this location has successfully started.', $target_location);
         } catch (\Exception $e) {
             DB::rollBack();
             return $this->responseServerError('Network Error Please Try Again');

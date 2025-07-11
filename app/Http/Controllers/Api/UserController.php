@@ -22,10 +22,15 @@ class UserController extends Controller
         $pagination = $request->query('pagination');
         $target_location_users = $request->query('target_location_users');
         $target_location_id_users_update = $request->query('target_location_id_users_update');
+        $user_for = strtolower($request->query('user_for'));
 
         $users = User::query()
             ->when($status === 'inactive', function ($query) {
                 $query->onlyTrashed();
+            })->when($user_for, function ($query) use ($user_for) {
+                return $query->whereHas('role', function ($q) use ($user_for) {
+                    $q->whereRaw('LOWER(name) = ?', [$user_for]);
+                });
             })
             ->when($target_location_users == 1, function ($query) {
                 $query

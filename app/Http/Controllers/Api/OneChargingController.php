@@ -102,9 +102,9 @@ class OneChargingController extends Controller
         // Prevent updating soft-deleted records that are in use by users
         $validData = collect($validData)->filter(function ($item) {
             if ($item['deleted_at'] !== null) {
-                // Check if any user is using this code
+                // Check if any user is using this sync_id
                 $isUsed = DB::table('users')
-                    ->where('one_charging_code', $item['code'])
+                    ->where('one_charging_sync_id', $item['sync_id'])
                     ->exists();
 
                 // Skip if in use

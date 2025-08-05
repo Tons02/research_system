@@ -193,17 +193,17 @@ class SurveyAnswerController extends Controller
                 }
             }
 
-            $total_survey_of_surveyor_after_creating = SurveyAnswer::where('target_location_id', $request["target_location_id"])
-                ->where('surveyor_id', $user->id)
-                ->count();
+            // $total_survey_of_surveyor_after_creating = SurveyAnswer::where('target_location_id', $request["target_location_id"])
+            //     ->where('surveyor_id', $user->id)
+            //     ->count();
 
-            if ($total_survey_of_surveyor_after_creating === $pivotLimit) {
-                // Find the target location pivot record
-                $user->target_locations_users()
-                    ->updateExistingPivot($request["target_location_id"], [
-                        'is_done' => 1
-                    ]);
-            }
+            // if ($total_survey_of_surveyor_after_creating === $pivotLimit) {
+            //     // Find the target location pivot record
+            //     $user->target_locations_users()
+            //         ->updateExistingPivot($request["target_location_id"], [
+            //             'is_done' => 1
+            //         ]);
+            // }
 
             DB::commit();
             return $this->responseCreated('Survey Answer Successfully Synced', $create_survey_answer);

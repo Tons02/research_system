@@ -32,6 +32,7 @@ class UserRequest extends FormRequest
             "personal_info.first_name" => "sometimes:required",
             "personal_info.last_name" => "sometimes:required",
             "personal_info.mobile_number" => [
+                "nullable",
                 "unique:users,mobile_number," . $this->route()->user,
                 "regex:/^\+63\d{10}$/",
             ],

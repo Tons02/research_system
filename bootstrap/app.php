@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\Authenticate;
+use App\Http\Middleware\OneRdfAuthenticate;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -18,7 +19,8 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'abilities' => CheckAbilities::class,
             'ability' => CheckForAnyAbility::class,
-            'auth' => Authenticate::class
+            'auth' => Authenticate::class,
+            'onerdf' => OneRdfAuthenticate::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

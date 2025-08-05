@@ -142,4 +142,66 @@ class OneChargingController extends Controller
 
         return $this->responseSuccess('Data has been synchronized successfully.');
     }
+
+
+    public function sync_from_one_rdf(Request $request)
+    {
+        $rawData = $request->all();
+
+        // $sync = collect($rawData)->map(function ($item) {
+        //     $item['unit_id'] = $item['department_unit_id'];
+        //     $item['unit_code'] = $item['department_unit_code'];
+        //     $item['unit_name'] = $item['department_unit_name'];
+
+        //     unset(
+        //         $item['department_unit_id'],
+        //         $item['department_unit_code'],
+        //         $item['department_unit_name']
+        //     );
+
+        //     return $item;
+        // })->toArray();
+
+        $sync = collect($request->all())->map(function ($item) {
+            return [
+                ...$item,
+                'unit_id' => $item['department_unit_id'],
+                'unit_code' => $item['department_unit_code'],
+                'unit_name' => $item['department_unit_name'],
+            ];
+        })->map(function ($item) {
+            unset($item['department_unit_id'], $item['department_unit_code'], $item['department_unit_name']);
+            return $item;
+        })->toArray();
+
+        $charging = OneCharging::upsert(
+            $sync,
+            ["sync_id"],
+            [
+                "code",
+                "name",
+                "company_id",
+                "company_code",
+                "company_name",
+                "business_unit_id",
+                "business_unit_code",
+                "business_unit_name",
+                "department_id",
+                "department_code",
+                "department_name",
+                "unit_id",              // now mapped from department_unit_id
+                "unit_code",            // now mapped from department_unit_code
+                "unit_name",            // now mapped from department_unit_name
+                "sub_unit_id",
+                "sub_unit_code",
+                "sub_unit_name",
+                "location_id",
+                "location_code",
+                "location_name",
+                "deleted_at",
+            ]
+        );
+
+        return $this->responseSuccess($charging, 'Data has been synchronized successfully.');
+    }
 }

@@ -22,6 +22,7 @@ class OneCharging extends Model
         'business_unit_code',
         'business_unit_name',
         'department_id',
+        'department_unit_id',
         'department_code',
         'department_name',
         'unit_id',
@@ -33,8 +34,6 @@ class OneCharging extends Model
         'location_id',
         'location_code',
         'location_name',
-        'created_at',
-        'updated_at',
         'deleted_at',
     ];
 

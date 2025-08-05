@@ -46,10 +46,14 @@ Route::post('login', [AuthController::class, 'login']);
 // Route::post('logout', [AuthController::class, 'logout']);
 // Route::patch('resetpassword/{id}', [AuthController::class, 'resetPassword'])->middleware(['abilities:user-management:user-accounts:crud']);
 
+Route::middleware('onerdf')->post('sync_charging', [OneChargingController::class, 'sync_from_one_rdf']);
+
+
 Route::middleware(['auth:sanctum'])->group(function () {
 
-    Route::resource("one-charging", OneChargingController::class)->middleware(['abilities:masterlist:one-charging:sync']);
 
+    Route::post('one-charging', [OneChargingController::class, 'store']);
+    Route::get("one-charging", [OneChargingController::class, 'index']);
     // Role Controller
     Route::put('role-archived/{id}', [RoleController::class, 'archived'])->middleware(['abilities:masterlist:role-management:crud']);
     Route::resource("role", RoleController::class)->middleware(['abilities:masterlist:role-management:crud']);

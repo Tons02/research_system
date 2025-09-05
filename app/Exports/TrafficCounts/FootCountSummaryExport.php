@@ -2,7 +2,7 @@
 
 namespace App\Exports\TrafficCounts;
 
-use App\Models\VehicleCount;
+use App\Models\FootCount;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithColumnWidths;
 use Maatwebsite\Excel\Concerns\WithDefaultStyles;
@@ -25,7 +25,7 @@ use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Style\Style;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
-class VehicleCountExport implements
+class FootCountSummaryExport implements
     FromCollection,
     WithHeadings,
     WithStyles,
@@ -41,7 +41,7 @@ class VehicleCountExport implements
     protected $data;
     protected ?Chart $chart = null;
 
-    private const SHEET_TITLE = 'Vehicle Count Summary';
+    private const SHEET_TITLE = 'Foot Count Summary';
 
     public function __construct($target_location_id, $surveyor_id)
     {
@@ -51,26 +51,29 @@ class VehicleCountExport implements
 
     public function collection()
     {
-        $this->data = VehicleCount::selectRaw("
-            vehicle_counts.date,
-            vehicle_counts.time_period,
+        $this->data = FootCount::selectRaw("
+            foot_counts.date,
+            foot_counts.time_period,
             GROUP_CONCAT(
                 DISTINCT CONCAT(
                     COALESCE(surveyors.first_name, ''), ' ', COALESCE(surveyors.last_name, '')
                 ) SEPARATOR ', '
             ) as surveyors,
-            SUM(vehicle_counts.total_left) as total_left,
-            SUM(vehicle_counts.total_right) as total_right,
-            SUM(vehicle_counts.grand_total) as grand_total
+            SUM(COALESCE(foot_counts.total_male, (foot_counts.total_left_male + foot_counts.total_right_male))) as total_male,
+            SUM(COALESCE(foot_counts.total_female, (foot_counts.total_left_female + foot_counts.total_right_female))) as total_female,
+            SUM(
+                COALESCE(foot_counts.total_male, (foot_counts.total_left_male + foot_counts.total_right_male)) +
+                COALESCE(foot_counts.total_female, (foot_counts.total_left_female + foot_counts.total_right_female))
+            ) as grand_total
         ")
-            ->leftJoin('users as surveyors', 'vehicle_counts.surveyor_id', '=', 'surveyors.id')
-            ->where('vehicle_counts.target_location_id', $this->target_location_id)
+            ->leftJoin('users as surveyors', 'foot_counts.surveyor_id', '=', 'surveyors.id')
+            ->where('foot_counts.target_location_id', $this->target_location_id)
             ->when($this->surveyor_id !== null, function ($query) {
-                $query->where('vehicle_counts.surveyor_id', $this->surveyor_id);
+                $query->where('foot_counts.surveyor_id', $this->surveyor_id);
             })
-            ->groupBy('vehicle_counts.date', 'vehicle_counts.time_period')
-            ->orderBy('vehicle_counts.date', 'asc')
-            ->orderByRaw("FIELD(vehicle_counts.time_period, 'AM', 'PM')")
+            ->groupBy('foot_counts.date', 'foot_counts.time_period')
+            ->orderBy('foot_counts.date', 'asc')
+            ->orderByRaw("FIELD(foot_counts.time_period, 'AM', 'PM')")
             ->get();
 
         return $this->data;
@@ -84,28 +87,28 @@ class VehicleCountExport implements
     public function headings(): array
     {
         return [
-            ["VEHICLE COUNT Summary"],
+            ["FOOT COUNT Summary"],
             [],
             [
                 'DATE',
                 'TIME PERIOD',
-                'TOTAL LEFT',
-                'TOTAL RIGHT',
+                'TOTAL MALE',
+                'TOTAL FEMALE',
                 'GRAND TOTAL',
                 'SURVEYOR',
             ]
         ];
     }
 
-    public function map($vehicle_count): array
+    public function map($foot_count): array
     {
         return [
-            $vehicle_count->date,
-            $vehicle_count->time_period,
-            $vehicle_count->total_left,
-            $vehicle_count->total_right,
-            $vehicle_count->grand_total,
-            $vehicle_count->surveyors ?? 'N/A',
+            $foot_count->date,
+            $foot_count->time_period,
+            $foot_count->total_male,
+            $foot_count->total_female,
+            $foot_count->grand_total,
+            $foot_count->surveyors ?? 'N/A',
         ];
     }
 
@@ -151,18 +154,18 @@ class VehicleCountExport implements
                     $dataCount
                 );
 
-                // ===== Two Series: TOTAL LEFT and TOTAL RIGHT =====
+                // ===== Two Series: TOTAL MALE and TOTAL FEMALE =====
 
-                // Series 1: TOTAL LEFT (Column C)
-                $leftValues = new DataSeriesValues(
+                // Series 1: TOTAL MALE (Column C)
+                $maleValues = new DataSeriesValues(
                     DataSeriesValues::DATASERIES_TYPE_NUMBER,
                     "{$sheetTitleQuoted}!\$C\${$startDataRow}:\$C\${$endDataRow}",
                     null,
                     $dataCount
                 );
 
-                // Series 2: TOTAL RIGHT (Column D)
-                $rightValues = new DataSeriesValues(
+                // Series 2: TOTAL FEMALE (Column D)
+                $femaleValues = new DataSeriesValues(
                     DataSeriesValues::DATASERIES_TYPE_NUMBER,
                     "{$sheetTitleQuoted}!\$D\${$startDataRow}:\$D\${$endDataRow}",
                     null,
@@ -185,14 +188,14 @@ class VehicleCountExport implements
                     )
                 ];
 
-                // Build series with two data series (TOTAL LEFT and TOTAL RIGHT)
+                // Build series with two data series (TOTAL MALE and TOTAL FEMALE)
                 $series = new DataSeries(
                     DataSeries::TYPE_BARCHART,
                     DataSeries::GROUPING_CLUSTERED,
                     range(0, 1),               // two series (0 and 1)
                     $seriesLabels,
                     [$categoryLevel1, $categoryLevel2], // multi-level: Time Period first, then Date
-                    [$leftValues, $rightValues]         // both left and right values
+                    [$maleValues, $femaleValues]        // both male and female values
                 );
                 $series->setPlotDirection(DataSeries::DIRECTION_COL);
 
@@ -203,10 +206,10 @@ class VehicleCountExport implements
 
                 $plotArea = new PlotArea(null, [$series]);
                 $legend   = new Legend(Legend::POSITION_BOTTOM, null, false);
-                $title    = new Title('Vehicle Count Summary');
+                $title    = new Title('Foot Count Summary');
 
                 $chart = new Chart(
-                    'vehicleCountChart',
+                    'footCountChart',
                     $title,
                     $legend,
                     $plotArea,

@@ -17,9 +17,23 @@ class VehicleCountResource extends JsonResource
         return [
             'id' => $this->id,
             'date' => $this->date,
-            'time' => $this->time,
+            'time_range' => $this->time_range,
             'time_period' => $this->time_period,
+            'total_left_private_car' => $this->total_left_private_car,
+            'total_left_truck' => $this->total_left_truck,
+            'total_left_jeepney' => $this->total_left_jeepney,
+            'total_left_bus' => $this->total_left_bus,
+            'total_left_tricycle' => $this->total_left_tricycle,
+            'total_left_bicycle' => $this->total_left_bicycle,
+            'total_left_e_bike' => $this->total_left_e_bike,
             'total_left' => $this->total_left,
+            'total_right_private_car' => $this->total_right_private_car,
+            'total_right_truck' => $this->total_right_truck,
+            'total_right_jeepney' => $this->total_right_jeepney,
+            'total_right_bus' => $this->total_right_bus,
+            'total_right_tricycle' => $this->total_right_tricycle,
+            'total_right_bicycle' => $this->total_right_bicycle,
+            'total_right_e_bike' => $this->total_right_e_bike,
             'total_right' => $this->total_right,
             'grand_total' => $this->grand_total,
             'surveyor' => [
@@ -37,6 +51,7 @@ class VehicleCountResource extends JsonResource
                     $this->target_locations->first()?->barangay ?? null,
                 ])),
             ],
+            'sync_at' => $this->sync_at,
             'created_at' => $this->created_at
         ];
     }

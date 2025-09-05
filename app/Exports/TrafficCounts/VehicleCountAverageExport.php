@@ -27,21 +27,36 @@ use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Style\Style;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
-class VehicleCountAverageExport implements FromCollection, WithHeadings, WithStyles, WithTitle, WithMapping, WithDefaultStyles, WithColumnWidths, WithColumnFormatting, WithEvents
+class VehicleCountAverageExport implements FromCollection, WithHeadings, WithStyles, WithTitle, WithMapping, WithDefaultStyles, WithColumnWidths, WithColumnFormatting, WithEvents, WithCharts
 {
-    protected $target_location_id, $vehicleCounts;
+    protected $target_location_id, $vehicleCounts, $surveyor_id;
+    protected ?Chart $chart = null;
 
-    public function __construct($target_location_id)
+    private const SHEET_TITLE = 'Vehicle Count Average';
+
+    // Vehicle type mappings for calculation
+    private const VEHICLE_TYPES = [
+        'private_car',
+        'truck',
+        'jeepney',
+        'bus',
+        'tricycle',
+        'bicycle',
+        'e_bike'
+    ];
+
+    public function __construct($target_location_id, $surveyor_id = null)
     {
-
         $this->target_location_id = $target_location_id;
+        $this->surveyor_id = $surveyor_id;
 
-
-        // Fetch vehicle counts and filter by location using whereHas
-        $data = DB::table('target_locations_vehicle_counts')
-            ->join('vehicle_counts', 'target_locations_vehicle_counts.vehicle_count_id', '=', 'vehicle_counts.id')
-            ->join('target_locations', 'target_locations_vehicle_counts.target_location_id', '=', 'target_locations.id')
-            ->where('target_locations_vehicle_counts.target_location_id', $this->target_location_id)
+        // Fetch vehicle counts and filter by location
+        $data = DB::table('vehicle_counts')
+            ->join('target_locations', 'vehicle_counts.target_location_id', '=', 'target_locations.id')
+            ->where('vehicle_counts.target_location_id', $this->target_location_id)
+            ->when($this->surveyor_id !== null, function ($query) {
+                $query->where('vehicle_counts.surveyor_id', $this->surveyor_id);
+            })
             ->orderBy('date', 'asc')
             ->get();
 
@@ -55,18 +70,20 @@ class VehicleCountAverageExport implements FromCollection, WithHeadings, WithSty
             $amTotal = $pmTotal = 0;
             $totalGrandTotal = 0;
 
-
             // Loop through each record for the current date
             foreach ($records as $record) {
+                // Calculate grand total for this record by summing all vehicle types for both directions
+                $recordTotal = $this->calculateRecordTotal($record);
+
                 // Add the grand total to the respective period (AM or PM)
                 if ($record->time_period === 'AM') {
-                    $amTotal += $record->grand_total;
+                    $amTotal += $recordTotal;
                 } elseif ($record->time_period === 'PM') {
-                    $pmTotal += $record->grand_total;
+                    $pmTotal += $recordTotal;
                 }
 
                 // Sum the grand totals for both AM and PM combined
-                $totalGrandTotal += $record->grand_total;
+                $totalGrandTotal += $recordTotal;
             }
 
             // Calculate the percentage for AM and PM
@@ -94,17 +111,31 @@ class VehicleCountAverageExport implements FromCollection, WithHeadings, WithSty
         $this->vehicleCounts = $result;
     }
 
+    /**
+     * Calculate the total count for a single record by summing all vehicle types
+     */
+    private function calculateRecordTotal($record): int
+    {
+        $total = 0;
+
+        foreach (self::VEHICLE_TYPES as $vehicleType) {
+            $leftField = "total_left_{$vehicleType}";
+            $rightField = "total_right_{$vehicleType}";
+
+            $total += ($record->$leftField ?? 0) + ($record->$rightField ?? 0);
+        }
+
+        return $total;
+    }
+
     public function collection()
     {
-        // Return the collection of vehicle counts
         return collect($this->vehicleCounts);
     }
 
-
-
     public function title(): string
     {
-        return 'Vehicle Average';
+        return self::SHEET_TITLE;
     }
 
     public function headings(): array
@@ -125,23 +156,173 @@ class VehicleCountAverageExport implements FromCollection, WithHeadings, WithSty
     public function map($vehicle_count): array
     {
         return [
-            $vehicle_count['date'], // Access as array
+            $vehicle_count['date'],
             strtoupper(date("l", strtotime($vehicle_count['date']))),
-            $vehicle_count['grand_total'], // Access as array
-            $vehicle_count['am_percentage'], // Access as array
-            $vehicle_count['pm_percentage'], // Access as array
+            $vehicle_count['grand_total'],
+            $vehicle_count['am_percentage'],
+            $vehicle_count['pm_percentage'],
         ];
     }
 
+    // Keep WithCharts so Laravel Excel includes charts in the writer
+    public function charts()
+    {
+        return $this->chart ? [$this->chart] : [];
+    }
+
+    public function registerEvents(): array
+    {
+        return [
+            AfterSheet::class => function (AfterSheet $event) {
+                $sheet = $event->sheet->getDelegate();
+                $lastRow = $sheet->getHighestRow() + 1;
+
+                // Add average calculation for total column
+                $columnsToSum = ["C"];
+                foreach ($columnsToSum as $column) {
+                    $sheet->setCellValue(
+                        "{$column}{$lastRow}",
+                        "=ROUND(AVERAGE({$column}3:{$column}" . ($lastRow - 1) . "), 0)"
+                    );
+
+                    $sheet->getStyle("{$column}{$lastRow}")->applyFromArray([
+                        'font' => [
+                            'bold' => true,
+                            'name' => 'Century Gothic',
+                            'size' => 9,
+                        ],
+                        'alignment' => [
+                            'horizontal' => Alignment::HORIZONTAL_LEFT,
+                            'vertical' => Alignment::VERTICAL_CENTER,
+                        ],
+                        'borders' => [
+                            'allBorders' => [
+                                'borderStyle' => Border::BORDER_THIN,
+                                'color' => ['rgb' => '000000'],
+                            ],
+                        ],
+                    ]);
+                }
+
+                // Add "AVERAGE" label
+                $columnsToSum = ["B"];
+                foreach ($columnsToSum as $column) {
+                    $sheet->setCellValue("{$column}{$lastRow}", 'AVERAGE');
+
+                    $sheet->getStyle("{$column}{$lastRow}")->applyFromArray([
+                        'font' => [
+                            'bold' => true,
+                            'name' => 'Century Gothic',
+                            'size' => 9,
+                        ],
+                        'alignment' => [
+                            'horizontal' => Alignment::HORIZONTAL_LEFT,
+                            'vertical' => Alignment::VERTICAL_CENTER,
+                        ],
+                        'borders' => [
+                            'allBorders' => [
+                                'borderStyle' => Border::BORDER_THIN,
+                                'color' => ['rgb' => '000000'],
+                            ],
+                        ],
+                    ]);
+                }
+
+                // ===== CREATE HORIZONTAL BAR CHART =====
+                if (!empty($this->vehicleCounts)) {
+                    $dataCount = count($this->vehicleCounts);
+                    $startDataRow = 4;
+                    $endDataRow = $startDataRow + $dataCount - 1;
+                    $sheetTitleQuoted = "'" . self::SHEET_TITLE . "'";
+
+                    // Categories: Days of the week (Column B)
+                    $categories = new DataSeriesValues(
+                        DataSeriesValues::DATASERIES_TYPE_STRING,
+                        "{$sheetTitleQuoted}!\$B\${$startDataRow}:\$B\${$endDataRow}",
+                        null,
+                        $dataCount
+                    );
+
+                    // Series 1: AM percentages (Column D)
+                    $amValues = new DataSeriesValues(
+                        DataSeriesValues::DATASERIES_TYPE_NUMBER,
+                        "{$sheetTitleQuoted}!\$D\${$startDataRow}:\$D\${$endDataRow}",
+                        null,
+                        $dataCount
+                    );
+
+                    // Series 2: PM percentages (Column E)
+                    $pmValues = new DataSeriesValues(
+                        DataSeriesValues::DATASERIES_TYPE_NUMBER,
+                        "{$sheetTitleQuoted}!\$E\${$startDataRow}:\$E\${$endDataRow}",
+                        null,
+                        $dataCount
+                    );
+
+                    // Series labels from headers D3 and E3
+                    $seriesLabels = [
+                        new DataSeriesValues(
+                            DataSeriesValues::DATASERIES_TYPE_STRING,
+                            "{$sheetTitleQuoted}!\$D\$3",
+                            null,
+                            1
+                        ),
+                        new DataSeriesValues(
+                            DataSeriesValues::DATASERIES_TYPE_STRING,
+                            "{$sheetTitleQuoted}!\$E\$3",
+                            null,
+                            1
+                        )
+                    ];
+
+                    // Create horizontal bar chart
+                    $series = new DataSeries(
+                        DataSeries::TYPE_BARCHART,
+                        DataSeries::GROUPING_CLUSTERED,
+                        range(0, 1), // two series (AM and PM)
+                        $seriesLabels,
+                        [$categories], // categories (days)
+                        [$amValues, $pmValues] // AM and PM percentages
+                    );
+
+                    // Make it horizontal
+                    $series->setPlotDirection(DataSeries::DIRECTION_BAR);
+                    $plotArea = new PlotArea(null, [$series]);
+                    $legend = new Legend(Legend::POSITION_BOTTOM, null, false);
+                    $title = new Title('Daily AM/PM Vehicle Distribution');
+
+                    $chart = new Chart(
+                        'vehicleCountAverageChart',
+                        $title,
+                        $legend,
+                        $plotArea,
+                        true,
+                        0,
+                        null,
+                        null
+                    );
+
+                    // Position the chart to the right of the table
+                    $chart->setTopLeftPosition('G3');
+                    $chart->setBottomRightPosition('P20');
+
+                    // Keep reference for WithCharts
+                    $this->chart = $chart;
+
+                    // Add chart to sheet
+                    $sheet->addChart($chart);
+                }
+            }
+        ];
+    }
 
     public function styles(Worksheet $sheet)
     {
         $sheet->mergeCells('A1:E2');
-
         $sheet->getStyle('A1:E2')->applyFromArray([
             'alignment' => [
                 'horizontal' => Alignment::HORIZONTAL_CENTER,
-                'vertical'   => Alignment::VERTICAL_CENTER,
+                'vertical' => Alignment::VERTICAL_CENTER,
             ],
             'font' => [
                 'bold' => true,
@@ -157,12 +338,11 @@ class VehicleCountAverageExport implements FromCollection, WithHeadings, WithSty
         $sheet->getStyle('A3:E3')->applyFromArray([
             'alignment' => [
                 'horizontal' => Alignment::HORIZONTAL_CENTER,
-                'vertical'   => Alignment::VERTICAL_CENTER,
+                'vertical' => Alignment::VERTICAL_CENTER,
             ],
         ]);
 
         $styles = [];
-
         foreach (range("A", "E") as $column) {
             $styles["{$column}3"] = [
                 'fill' => [
@@ -182,24 +362,34 @@ class VehicleCountAverageExport implements FromCollection, WithHeadings, WithSty
                 ],
             ];
         }
+
         $highestRow = $sheet->getHighestRow();
 
         // Apply styles dynamically from row 4 to the last row
         for ($row = 4; $row <= $highestRow; $row++) {
             foreach (range("A", "E") as $column) {
+                // Determine background color: grey for even rows, white for odd rows
+                $fillColor = ($row % 2 === 0) ? 'F2F2F2' : 'FFFFFF';
+
                 $sheet->getStyle("{$column}{$row}")->applyFromArray([
                     'font' => [
                         'name' => 'Century Gothic',
                         'size' => 10,
                     ],
                     'alignment' => [
-                        'horizontal' => Alignment::HORIZONTAL_LEFT, // Left-align text
-                        'vertical' => Alignment::VERTICAL_CENTER, // Center vertically
+                        'horizontal' => Alignment::HORIZONTAL_LEFT,
+                        'vertical' => Alignment::VERTICAL_CENTER,
                     ],
                     'borders' => [
                         'allBorders' => [
                             'borderStyle' => Border::BORDER_THIN,
                             'color' => ['rgb' => '000000'],
+                        ],
+                    ],
+                    'fill' => [
+                        'fillType' => Fill::FILL_SOLID,
+                        'startColor' => [
+                            'rgb' => $fillColor,
                         ],
                     ],
                 ]);
@@ -209,11 +399,9 @@ class VehicleCountAverageExport implements FromCollection, WithHeadings, WithSty
         return $styles;
     }
 
-
     public function defaultStyles(Style $defaultStyle)
     {
         $defaultStyle->getFont()->setName('Century Gothic')->setSize(10);
-
         return $defaultStyle;
     }
 
@@ -231,105 +419,8 @@ class VehicleCountAverageExport implements FromCollection, WithHeadings, WithSty
     public function columnFormats(): array
     {
         return [
-            "D" =>  '0%',
-            "E" =>  '0%',
+            "D" => '0.00%',
+            "E" => '0.00%',
         ];
     }
-    public function registerEvents(): array
-    {
-        return [
-            AfterSheet::class => function (AfterSheet $event) {
-                $sheet = $event->sheet->getDelegate();
-                $lastRow = $sheet->getHighestRow() + 1;
-
-                $columnsToSum = ["C"];
-
-                foreach ($columnsToSum as $column) {
-                    // Set the formula for the average
-                    $sheet->setCellValue(
-                        "{$column}{$lastRow}",
-                        "=ROUND(AVERAGE({$column}3:{$column}" . ($lastRow - 1) . "), 0)"
-                    );
-
-                    // Apply styling to the cell
-                    $sheet->getStyle("{$column}{$lastRow}")->applyFromArray([
-                        'font' => [
-                            'bold' => true,
-                            'name' => 'Century Gothic',
-                            'size' => 9,
-                        ],
-                        'alignment' => [
-                            'horizontal' => Alignment::HORIZONTAL_LEFT,
-                            'vertical' => Alignment::VERTICAL_CENTER,
-                        ],
-                        'borders' => [
-                            'allBorders' => [
-                                'borderStyle' => Border::BORDER_THIN,
-                                'color' => ['rgb' => '000000'],
-                            ],
-                        ],
-                    ]);
-                }
-
-                $columnsToSum = ["B"];
-
-                foreach ($columnsToSum as $column) {
-                    // Set the formula for the average
-                    $sheet->setCellValue("{$column}{$lastRow}", 'AVERAGE');
-
-                    // Apply styling to the cell
-                    $sheet->getStyle("{$column}{$lastRow}")->applyFromArray([
-                        'font' => [
-                            'bold' => true,
-                            'name' => 'Century Gothic',
-                            'size' => 9,
-                        ],
-                        'alignment' => [
-                            'horizontal' => Alignment::HORIZONTAL_LEFT,
-                            'vertical' => Alignment::VERTICAL_CENTER,
-                        ],
-                        'borders' => [
-                            'allBorders' => [
-                                'borderStyle' => Border::BORDER_THIN,
-                                'color' => ['rgb' => '000000'],
-                            ],
-                        ],
-                    ]);
-                }
-            }
-        ];
-    }
-
-    // public function charts()
-    // {
-    //     // Count how many rows of data exist
-    //     $rowCount = $this->vehicleCounts->count();
-
-    //     // Define dynamic range for categories (DAYS)
-    //     $categories = [new DataSeriesValues('String', "'Vehicle Average'!\$B\$4:\$B\$" . ($rowCount + 4), null, $rowCount)];
-
-    //     // Define dynamic range for values (TOTALS)
-    //     $values = [new DataSeriesValues('Number', "'Vehicle Average'!\$C\$4:\$C\$" . ($rowCount + 4), null, $rowCount, [], 'Average')];
-
-    //     // Create the data series
-    //     $series = new DataSeries(
-    //         DataSeries::TYPE_BARCHART_3D,
-    //         DataSeries::GROUPING_STANDARD,
-    //         range(0, count($values) - 1),
-    //         [],
-    //         $categories,
-    //         $values
-    //     );
-
-    //     // Create plot area and chart
-    //     $plotArea = new PlotArea(null, [$series]);
-    //     $legend = new Legend();
-    //     $chart = new Chart('chart1', new Title('Vehicular Average by Day'), $legend, $plotArea);
-
-    //      // Customize chart dimensions (width: 800px, height: 400px)
-    //     $chart->setTopLeftPosition('G2');
-    //     $chart->setBottomRightPosition('O20');
-
-    //     return $chart;
-    // }
 }

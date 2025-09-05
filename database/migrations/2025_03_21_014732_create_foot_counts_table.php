@@ -14,9 +14,13 @@ return new class extends Migration
         Schema::create('foot_counts', function (Blueprint $table) {
             $table->increments('id');
             $table->date("date");
-            $table->time("time");
-            $table->string("time_period", 2);
+            $table->time("time_range");
+            $table->enum("time_period", ["AM", "PM"]);
+            $table->integer('total_left_male');
+            $table->integer('total_right_male');
             $table->integer('total_male');
+            $table->integer('total_left_female');
+            $table->integer('total_right_female');
             $table->integer('total_female');
             $table->integer('grand_total');
             $table->unsignedInteger("surveyor_id")->index();

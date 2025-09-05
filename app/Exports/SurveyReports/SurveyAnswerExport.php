@@ -15,7 +15,7 @@ use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Cell\DataType;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
-class SurveyAnswerExport implements FromCollection, WithMapping, WithHeadings, WithTitle, WithEvents, WithStyles
+class SurveyAnswerExport implements FromCollection, WithHeadings, WithTitle, WithEvents, WithStyles
 {
     protected $target_location_id, $surveyor_id, $from_date, $to_date, $status;
 
@@ -34,12 +34,15 @@ class SurveyAnswerExport implements FromCollection, WithMapping, WithHeadings, W
 
         $data = QuestionAnswer::query()
             ->join('survey_answers', 'question_answers.survey_id', '=', 'survey_answers.id')
+            ->join('users', 'survey_answers.surveyor_id', '=', 'users.id') // join surveyor
             ->select(
                 'survey_answers.id as survey_id',
                 'survey_answers.name',
                 'question_answers.section',
                 'survey_answers.target_location_id',
                 'survey_answers.date',
+                'survey_answers.surveyor_id', // ✅ include surveyor id
+                DB::raw("CONCAT(users.first_name, ' ', COALESCE(users.middle_name, ''), ' ', users.last_name) as surveyor_name"), // ✅ concat full name
                 'question_answers.question',
                 'question_answers.answer'
             )
@@ -56,8 +59,8 @@ class SurveyAnswerExport implements FromCollection, WithMapping, WithHeadings, W
             ->orderBy('question_answers.id', 'asc')
             ->get();
 
+        // group like before
         $groupedBySurvey = [];
-
         foreach ($data as $item) {
             $surveyId = $item->survey_id;
             $section = $item->section ?? 'Uncategorized';
@@ -68,6 +71,8 @@ class SurveyAnswerExport implements FromCollection, WithMapping, WithHeadings, W
                     'name' => $item->name,
                     'target_location_id' => $item->target_location_id,
                     'date' => $item->date,
+                    'surveyor_id' => $item->surveyor_id,
+                    'surveyor' => trim(preg_replace('/\s+/', ' ', $item->surveyor_name)),
                     'sections' => []
                 ];
             }
@@ -85,27 +90,30 @@ class SurveyAnswerExport implements FromCollection, WithMapping, WithHeadings, W
             ];
         }
 
-        // Reformat to clean output (remove associative keys)
+        // flatten
         $finalResult = [];
-
         foreach ($groupedBySurvey as $surveyGroup) {
             $sectionsArray = [];
-
             foreach ($surveyGroup['sections'] as $sectionData) {
                 $sectionsArray[] = $sectionData;
             }
 
             $finalResult[] = [
                 'survey_id' => $surveyGroup['survey_id'],
-                'name' => $surveyGroup['name'], // ✅ add this line
+                'name' => $surveyGroup['name'],
                 'target_location_id' => $surveyGroup['target_location_id'],
                 'date' => $surveyGroup['date'],
+                'surveyor_id' => $surveyGroup['surveyor_id'],
+                'surveyor' => $surveyGroup['surveyor'],
                 'sections' => $sectionsArray
             ];
         }
 
         return collect($finalResult);
     }
+
+
+
 
     public function title(): string
     {
@@ -116,16 +124,16 @@ class SurveyAnswerExport implements FromCollection, WithMapping, WithHeadings, W
     {
         return [
             'Name',
+            'Survey ID',
+            'Date',
+            'Section',
             'Question',
-            'Answers',
+            'Answer',
+            'Surveyor ID',
+            'Surveyor Name',
         ];
     }
 
-    public function map($section): array
-    {
-        // This won't be used directly since we're building custom rows in registerEvents
-        return [];
-    }
 
     public function styles(Worksheet $sheet)
     {
@@ -147,12 +155,14 @@ class SurveyAnswerExport implements FromCollection, WithMapping, WithHeadings, W
                 $sheet->setCellValue('D1', 'Section');
                 $sheet->setCellValue('E1', 'Question');
                 $sheet->setCellValue('F1', 'Answer');
+                $sheet->setCellValue('G1', 'Surveyor ID'); // ✅
+                $sheet->setCellValue('H1', 'Surveyor');    // ✅
 
                 // Style headers
-                $sheet->getStyle("A1:F1")->applyFromArray([
+                $sheet->getStyle("A1:H1")->applyFromArray([
                     'font' => ['bold' => true, 'size' => 12, 'name' => 'Century Gothic'],
                     'fill' => [
-                        'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
+                        'fillType' => Fill::FILL_SOLID,
                         'startColor' => ['argb' => 'FFD9D9D9']
                     ]
                 ]);
@@ -221,8 +231,13 @@ class SurveyAnswerExport implements FromCollection, WithMapping, WithHeadings, W
                                 $sheet->setCellValue("F{$row}", $answer);
                             }
 
+                            // ✅ New surveyor columns
+                            $sheet->setCellValue("G{$row}", $respondent['surveyor_id']);
+                            $sheet->setCellValue("H{$row}", $respondent['surveyor']);
+
+
                             // Apply styles
-                            $sheet->getStyle("A{$row}:F{$row}")->applyFromArray([
+                            $sheet->getStyle("A{$row}:H{$row}")->applyFromArray([
                                 'font' => ['name' => 'Century Gothic', 'size' => 10],
                                 'fill' => [
                                     'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
@@ -242,10 +257,12 @@ class SurveyAnswerExport implements FromCollection, WithMapping, WithHeadings, W
                 $sheet->getColumnDimension('D')->setWidth(20);
                 $sheet->getColumnDimension('E')->setWidth(110);
                 $sheet->getColumnDimension('F')->setWidth(40);
+                $sheet->getColumnDimension('G')->setWidth(15);  // Surveyor ID
+                $sheet->getColumnDimension('H')->setWidth(40);  // Surveyor Name
 
                 // Border styling for all cells with data
                 $lastRow = $row - 1;
-                $sheet->getStyle("A1:F{$lastRow}")->getBorders()->getAllBorders()
+                $sheet->getStyle("A1:H{$lastRow}")->getBorders()->getAllBorders()
                     ->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN);
             },
         ];

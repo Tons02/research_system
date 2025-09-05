@@ -52,32 +52,6 @@ class TargetLocationResource extends JsonResource
                 'description' => $this->form->description,
                 'sections' => $this->form->sections,
             ] : null,
-
-            'surveyors' => $this->target_locations_users->map(function ($surveyor) {
-                return [
-                    'id' => $surveyor->id,
-                    'first_name' => $surveyor->first_name,
-                    'middle_name' => $surveyor->middle_name,
-                    'last_name' => $surveyor->last_name,
-                    'username' => $surveyor->username,
-                    'mobile_number' => $surveyor->mobile_number,
-                    'response_limit' => $surveyor->pivot->response_limit,
-                ];
-            }),
-            'vehicle_counted_by' => [
-                'id' => $this->vehicle_counted_by_user->id,
-                'first_name' => $this->vehicle_counted_by_user->first_name,
-                'middle_name' => $this->vehicle_counted_by_user->middle_name,
-                'last_name' => $this->vehicle_counted_by_user->last_name,
-                'username' => $this->vehicle_counted_by_user->username,
-            ],
-            'foot_counted_by' => [
-                'id' => $this->foot_counted_by_user->id,
-                'first_name' => $this->foot_counted_by_user->first_name,
-                'middle_name' => $this->foot_counted_by_user->middle_name,
-                'last_name' => $this->foot_counted_by_user->last_name,
-                'username' => $this->foot_counted_by_user->username,
-            ],
             'is_final' => $this->is_final,
             'is_done' => $this->is_done,
             'start_date' => $this->start_date,

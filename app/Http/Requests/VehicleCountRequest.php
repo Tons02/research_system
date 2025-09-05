@@ -28,58 +28,61 @@ class VehicleCountRequest extends FormRequest
         return [
             "date" => [
                 "required",
-                "sometimes",
                 "date",
-                "before_or_equal:" . now()->toDateString(),
+                Rule::unique('vehicle_counts')
+                    ->where(
+                        fn($query) =>
+                        $query->where('time_range', $this->input('time_range'))
+                            ->where('time_period', $this->input('time_period'))
+                            ->where('target_location_id', $this->input('target_location_id'))
+                    )
+                    ->ignore($this->route('vehicle_count'))
+            ],
+            'time_period' => [
+                'required',
+                'in:AM,PM'
+            ],
+            'time_range' => [
+                'required',
                 function ($attribute, $value, $fail) {
-                    $targetLocationId = request('target_location_id');
-                    // dd($value); this return  2025-03-26 and it's existing on vehicle_counts.date but still accepting
+                    $allowedRanges = [
+                        'AM' => [
+                            '8:00 - 9:00',
+                            '9:00 - 10:00',
+                            '10:00 - 11:00',
+                            '11:00 - 12:00',
+                        ],
+                        'PM' => [
+                            '1:00 - 2:00',
+                            '2:00 - 3:00',
+                            '3:00 - 4:00',
+                            '4:00 - 5:00',
+                        ],
+                    ];
 
-                    if (!$targetLocationId) {
-                        $fail("The target location ID is required.");
-                        return;
-                    }
+                    $timePeriod = request('time_period');
 
-                    $existingEntries = DB::table('target_locations_vehicle_counts')
-                        ->join('vehicle_counts', 'target_locations_vehicle_counts.vehicle_count_id', '=', 'vehicle_counts.id')
-                        ->whereDate('vehicle_counts.date', $value)
-                        ->where('target_locations_vehicle_counts.target_location_id', $targetLocationId)
-                        ->select('vehicle_counts.time')
-                        ->get();
-
-                    $amExists = $existingEntries->contains(fn($entry) => Carbon::parse($entry->time)->format('A') === 'AM');
-                    $pmExists = $existingEntries->contains(fn($entry) => Carbon::parse($entry->time)->format('A') === 'PM');
-
-                    $currentTime = request('time') ? Carbon::parse(request('time'))->format('A') : null;
-
-                    if (!$currentTime) {
-                        $fail("The time field is required.");
-                        return;
-                    }
-
-                    if (($amExists && $currentTime === 'AM') || ($pmExists && $currentTime === 'PM')) {
-                        $fail("Only one AM and one PM entry are allowed per day for this target location.");
+                    if (!isset($allowedRanges[$timePeriod]) || !in_array($value, $allowedRanges[$timePeriod])) {
+                        $fail("The selected $attribute is invalid for the given time period.");
                     }
                 }
             ],
-            "time" => [
-                "required",
-                "sometimes",
-                "date_format:H:i:s",
-                "regex:/^(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d$/"
-            ],
-            "total_left" => [
-                "required",
-                "sometimes",
-                "integer"
-            ],
-            "total_right" =>  [
-                "required",
-                "sometimes",
-                "integer"
-            ],
-            "surveyor_id" => ["required", "sometimes", "exists:users,id"],
+            "total_left_private_car" => "required|integer",
+            "total_left_truck" => "required|integer",
+            "total_left_jeepney" => "required|integer",
+            "total_left_bus" => "required|integer",
+            "total_left_tricycle" => "required|integer",
+            "total_left_bicycle" => "required|integer",
+            "total_left_e_bike" => "required|integer",
+            "total_right_private_car" => "required|integer",
+            "total_right_truck" => "required|integer",
+            "total_right_jeepney" => "required|integer",
+            "total_right_bus" => "required|integer",
+            "total_right_tricycle" => "required|integer",
+            "total_right_bicycle" => "required|integer",
+            "total_right_e_bike" => "required|integer",
             "target_location_id" => ["required", "sometimes", "exists:target_locations,id"],
+            "created_at" => ["required", "sometimes"],
         ];
     }
 

@@ -6,6 +6,7 @@ use App\Models\FootCount;
 use Carbon\Carbon;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 
 class FootCountRequest extends FormRequest
 {
@@ -27,45 +28,51 @@ class FootCountRequest extends FormRequest
         return [
             "date" => [
                 "required",
-                "sometimes",
                 "date",
-                "before_or_equal:" . now()->toDateString(),
+                Rule::unique('foot_counts')
+                    ->where(
+                        fn($query) =>
+                        $query->where('time_range', $this->input('time_range'))
+                            ->where('time_period', $this->input('time_period'))
+                            ->where('target_location_id', $this->input('target_location_id'))
+                    )
+                    ->ignore($this->route('foot_count'))
+            ],
+            'time_period' => [
+                'required',
+                'in:AM,PM'
+            ],
+            'time_range' => [
+                'required',
                 function ($attribute, $value, $fail) {
-                    $targetLocationId = request('target_location_id');
+                    $allowedRanges = [
+                        'AM' => [
+                            '8:00 - 9:00',
+                            '9:00 - 10:00',
+                            '10:00 - 11:00',
+                            '11:00 - 12:00',
+                        ],
+                        'PM' => [
+                            '1:00 - 2:00',
+                            '2:00 - 3:00',
+                            '3:00 - 4:00',
+                            '4:00 - 5:00',
+                        ],
+                    ];
 
-                    if (!$targetLocationId) {
-                        $fail("The target location ID is required.");
-                        return;
-                    }
+                    $timePeriod = request('time_period');
 
-                    // Get existing entries from the pivot table
-                    $existingEntries = DB::table('target_locations_foot_counts')
-                        ->join('foot_counts', 'target_locations_foot_counts.foot_count_id', '=', 'foot_counts.id')
-                        ->whereDate('foot_counts.date', $value)
-                        ->where('target_locations_foot_counts.target_location_id', $targetLocationId)
-                        ->select('foot_counts.time')
-                        ->get();
-
-                    // Allow at most one AM and one PM entry per target_location_id
-                    $amExists = $existingEntries->contains(function ($entry) {
-                        return Carbon::parse($entry->time)->format('A') === 'AM';
-                    });
-
-                    $pmExists = $existingEntries->contains(function ($entry) {
-                        return Carbon::parse($entry->time)->format('A') === 'PM';
-                    });
-
-                    $currentTime = Carbon::parse(request('time'))->format('A');
-
-                    if (($amExists && $currentTime === 'AM') || ($pmExists && $currentTime === 'PM')) {
-                        $fail("Only one AM and one PM entry are allowed per day for this target location.");
+                    if (!isset($allowedRanges[$timePeriod]) || !in_array($value, $allowedRanges[$timePeriod])) {
+                        $fail("The selected $attribute is invalid for the given time period.");
                     }
                 }
             ],
-            "time" => ["sometimes", "required", "date_format:H:i:s", "before_or_equal:23:59:59"],
-            "total_male" => "sometimes|required|integer",
-            "total_female" => "sometimes|required|integer",
+            "total_left_male" => "sometimes|required|integer",
+            "total_right_male" => "sometimes|required|integer",
+            "total_left_female" => "sometimes|required|integer",
+            "total_right_female" => "sometimes|required|integer",
             "target_location_id" => ["required", "sometimes", "exists:target_locations,id"],
+            "created_at" => ["required", "sometimes"],
         ];
     }
 }

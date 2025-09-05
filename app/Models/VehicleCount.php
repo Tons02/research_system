@@ -13,13 +13,29 @@ class VehicleCount extends Model
     use HasFactory, SoftDeletes, Filterable;
     protected $fillable = [
         'date',
-        'time',
+        'time_range',
         'time_period',
+        'total_left_private_car',
+        'total_left_truck',
+        'total_left_jeepney',
+        'total_left_bus',
+        'total_left_tricycle',
+        'total_left_bicycle',
+        'total_left_e_bike',
         'total_left',
+        'total_right_private_car',
+        'total_right_truck',
+        'total_right_jeepney',
+        'total_right_bus',
+        'total_right_tricycle',
+        'total_right_bicycle',
+        'total_right_e_bike',
         'total_right',
         'grand_total',
+        'target_location_id',
         'surveyor_id',
-        'surveyor_id',
+        'sync_at',
+        'created_at',
     ];
 
     protected $hidden = [
@@ -31,14 +47,7 @@ class VehicleCount extends Model
 
     public function target_locations()
     {
-        return $this->belongsToMany(
-            TargetLocation::class,
-            "target_locations_vehicle_counts",
-            "vehicle_count_id",
-            "target_location_id",
-            "id",
-            "id"
-        );
+        return $this->belongsTo(TargetLocation::class, 'target_location_id')->withTrashed();
     }
 
     public function surveyor()

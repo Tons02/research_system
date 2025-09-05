@@ -27,20 +27,25 @@ use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Style\Style;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
-class FootCountAverageExport implements FromCollection, WithHeadings, WithStyles, WithTitle, WithMapping, WithDefaultStyles, WithColumnWidths, WithColumnFormatting, WithEvents
+class FootCountAverageExport implements FromCollection, WithHeadings, WithStyles, WithTitle, WithMapping, WithDefaultStyles, WithColumnWidths, WithColumnFormatting, WithEvents, WithCharts
 {
-    protected $target_location_id, $footCounts;
+    protected $target_location_id, $footCounts, $surveyor_id;
+    protected ?Chart $chart = null;
 
-    public function __construct($target_location_id)
+    private const SHEET_TITLE = 'Foot Count Average';
+
+    public function __construct($target_location_id, $surveyor_id)
     {
         $this->target_location_id = $target_location_id;
-
+        $this->surveyor_id = $surveyor_id;
 
         // Fetch foot counts and filter by location using whereHas
-        $data = DB::table('target_locations_foot_counts')
-            ->join('foot_counts', 'target_locations_foot_counts.foot_count_id', '=', 'foot_counts.id')
-            ->join('target_locations', 'target_locations_foot_counts.target_location_id', '=', 'target_locations.id')
-            ->where('target_locations_foot_counts.target_location_id', $this->target_location_id)
+        $data = DB::table('foot_counts')
+            ->join('target_locations', 'foot_counts.target_location_id', '=', 'target_locations.id')
+            ->where('foot_counts.target_location_id', $this->target_location_id)
+            ->when($this->surveyor_id !== null, function ($query) {
+                $query->where('foot_counts.surveyor_id', $this->surveyor_id);
+            })
             ->orderBy('date', 'asc')
             ->get();
 
@@ -53,7 +58,6 @@ class FootCountAverageExport implements FromCollection, WithHeadings, WithStyles
         foreach ($groupedByDate as $date => $records) {
             $totalFemale = $totalMale = 0;
             $totalGrandTotal = 0;
-
 
             // Loop through each record for the current date
             foreach ($records as $record) {
@@ -98,16 +102,15 @@ class FootCountAverageExport implements FromCollection, WithHeadings, WithStyles
         return collect($this->footCounts);
     }
 
-
     public function title(): string
     {
-        return 'Foot Count Average';
+        return self::SHEET_TITLE;
     }
 
     public function headings(): array
     {
         return [
-            ["FOOT COUNT AVERAGE ON " . ($this->collection()->first()['target_location'] ?? 'NO AVAILABLE DATA')],
+            ["FOOT COUNT AVERAGE"],
             [],
             [
                 'DATE',
@@ -130,106 +133,10 @@ class FootCountAverageExport implements FromCollection, WithHeadings, WithStyles
         ];
     }
 
-    public function styles(Worksheet $sheet)
+    // Keep WithCharts so Laravel Excel includes charts in the writer
+    public function charts()
     {
-        $sheet->mergeCells('A1:E2');
-
-        $sheet->getStyle('A1:E2')->applyFromArray([
-            'alignment' => [
-                'horizontal' => Alignment::HORIZONTAL_CENTER,
-                'vertical'   => Alignment::VERTICAL_CENTER,
-            ],
-            'font' => [
-                'bold' => true,
-                'name' => 'Century Gothic',
-                'size' => 13,
-            ],
-            'fill' => [
-                'fillType' => Fill::FILL_SOLID,
-                'startColor' => ['rgb' => 'BFBFBF'],
-            ],
-        ]);
-
-        $sheet->getStyle('A3:E3')->applyFromArray([
-            'alignment' => [
-                'horizontal' => Alignment::HORIZONTAL_CENTER,
-                'vertical'   => Alignment::VERTICAL_CENTER,
-            ],
-        ]);
-
-        $styles = [];
-
-        foreach (range("A", "E") as $column) {
-            $styles["{$column}3"] = [
-                'fill' => [
-                    'fillType' => Fill::FILL_SOLID,
-                    'startColor' => ['rgb' => '00B050'],
-                ],
-                'font' => [
-                    'bold' => true,
-                    'name' => 'Century Gothic',
-                    'size' => 11,
-                ],
-                'borders' => [
-                    'allBorders' => [
-                        'borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN,
-                        'color' => ['rgb' => '000000'],
-                    ],
-                ],
-            ];
-        }
-        $highestRow = $sheet->getHighestRow();
-
-        // Apply styles dynamically from row 4 to the last row
-        for ($row = 4; $row <= $highestRow; $row++) {
-            foreach (range("A", "E") as $column) {
-                $sheet->getStyle("{$column}{$row}")->applyFromArray([
-                    'font' => [
-                        'name' => 'Century Gothic',
-                        'size' => 10,
-                    ],
-                    'alignment' => [
-                        'horizontal' => Alignment::HORIZONTAL_LEFT, // Left-align text
-                        'vertical' => Alignment::VERTICAL_CENTER, // Center vertically
-                    ],
-                    'borders' => [
-                        'allBorders' => [
-                            'borderStyle' => Border::BORDER_THIN,
-                            'color' => ['rgb' => '000000'],
-                        ],
-                    ],
-                ]);
-            }
-        }
-
-        return $styles;
-    }
-
-
-    public function defaultStyles(Style $defaultStyle)
-    {
-        $defaultStyle->getFont()->setName('Century Gothic')->setSize(10);
-
-        return $defaultStyle;
-    }
-
-    public function columnWidths(): array
-    {
-        return [
-            'A' => 15,
-            'B' => 15,
-            'C' => 15,
-            'D' => 15,
-            'E' => 15,
-        ];
-    }
-
-    public function columnFormats(): array
-    {
-        return [
-            "D" =>  '0.00%',
-            "E" =>  '0.00%',
-        ];
+        return $this->chart ? [$this->chart] : [];
     }
 
     public function registerEvents(): array
@@ -293,40 +200,205 @@ class FootCountAverageExport implements FromCollection, WithHeadings, WithStyles
                         ],
                     ]);
                 }
+
+                // ===== CREATE HORIZONTAL BAR CHART =====
+                if (!empty($this->footCounts)) {
+                    $dataCount = count($this->footCounts);
+                    $startDataRow = 4;
+                    $endDataRow = $startDataRow + $dataCount - 1;
+
+                    $sheetTitleQuoted = "'" . self::SHEET_TITLE . "'";
+
+                    // Categories: Days of the week (Column B)
+                    $categories = new DataSeriesValues(
+                        DataSeriesValues::DATASERIES_TYPE_STRING,
+                        "{$sheetTitleQuoted}!\$B\${$startDataRow}:\$B\${$endDataRow}",
+                        null,
+                        $dataCount
+                    );
+
+                    // Series 1: AM percentages (Column D)
+                    $amValues = new DataSeriesValues(
+                        DataSeriesValues::DATASERIES_TYPE_NUMBER,
+                        "{$sheetTitleQuoted}!\$D\${$startDataRow}:\$D\${$endDataRow}",
+                        null,
+                        $dataCount
+                    );
+
+                    // Series 2: PM percentages (Column E)
+                    $pmValues = new DataSeriesValues(
+                        DataSeriesValues::DATASERIES_TYPE_NUMBER,
+                        "{$sheetTitleQuoted}!\$E\${$startDataRow}:\$E\${$endDataRow}",
+                        null,
+                        $dataCount
+                    );
+
+                    // Series labels from headers D3 and E3
+                    $seriesLabels = [
+                        new DataSeriesValues(
+                            DataSeriesValues::DATASERIES_TYPE_STRING,
+                            "{$sheetTitleQuoted}!\$D\$3",
+                            null,
+                            1
+                        ),
+                        new DataSeriesValues(
+                            DataSeriesValues::DATASERIES_TYPE_STRING,
+                            "{$sheetTitleQuoted}!\$E\$3",
+                            null,
+                            1
+                        )
+                    ];
+
+                    // Create horizontal bar chart
+                    $series = new DataSeries(
+                        DataSeries::TYPE_BARCHART,
+                        DataSeries::GROUPING_CLUSTERED,
+                        range(0, 1),               // two series (AM and PM)
+                        $seriesLabels,
+                        [$categories],             // categories (days)
+                        [$amValues, $pmValues]     // AM and PM percentages
+                    );
+
+                    // Make it horizontal
+                    $series->setPlotDirection(DataSeries::DIRECTION_BAR);
+
+                    $plotArea = new PlotArea(null, [$series]);
+                    $legend = new Legend(Legend::POSITION_BOTTOM, null, false);
+                    $title = new Title('Daily AM/PM Distribution');
+
+                    $chart = new Chart(
+                        'footCountAverageChart',
+                        $title,
+                        $legend,
+                        $plotArea,
+                        true,
+                        0,
+                        null,
+                        null
+                    );
+
+                    // Position the chart to the right of the table
+                    $chart->setTopLeftPosition('G3');
+                    $chart->setBottomRightPosition('P20');
+
+                    // Keep reference for WithCharts
+                    $this->chart = $chart;
+
+                    // Add chart to sheet
+                    $sheet->addChart($chart);
+                }
             }
         ];
     }
 
-    // public function charts()
-    // {
-    //     // Count how many rows of data exist
-    //     $rowCount = $this->footCounts->count();
+    public function styles(Worksheet $sheet)
+    {
+        $sheet->mergeCells('A1:E2');
 
-    //     // Define dynamic range for categories (DAYS)
-    //     $categories = [new DataSeriesValues('String', "'Foot Average'!\$B\$4:\$B\$" . ($rowCount + 4), null, $rowCount)];
+        $sheet->getStyle('A1:E2')->applyFromArray([
+            'alignment' => [
+                'horizontal' => Alignment::HORIZONTAL_CENTER,
+                'vertical'   => Alignment::VERTICAL_CENTER,
+            ],
+            'font' => [
+                'bold' => true,
+                'name' => 'Century Gothic',
+                'size' => 13,
+            ],
+            'fill' => [
+                'fillType' => Fill::FILL_SOLID,
+                'startColor' => ['rgb' => 'BFBFBF'],
+            ],
+        ]);
 
-    //     // Define dynamic range for values (TOTALS)
-    //     $values = [new DataSeriesValues('Number', "'Foot Average'!\$C\$4:\$C\$" . ($rowCount + 4), null, $rowCount, [], 'Average')];
+        $sheet->getStyle('A3:E3')->applyFromArray([
+            'alignment' => [
+                'horizontal' => Alignment::HORIZONTAL_CENTER,
+                'vertical'   => Alignment::VERTICAL_CENTER,
+            ],
+        ]);
 
-    //     // Create the data series
-    //     $series = new DataSeries(
-    //         DataSeries::TYPE_BARCHART_3D,
-    //         DataSeries::GROUPING_STANDARD,
-    //         range(0, count($values) - 1),
-    //         [],
-    //         $categories,
-    //         $values
-    //     );
+        $styles = [];
 
-    //     // Create plot area and chart
-    //     $plotArea = new PlotArea(null, [$series]);
-    //     $legend = new Legend();
-    //     $chart = new Chart('chart1', new Title('Vehicular Average by Day'), $legend, $plotArea);
+        foreach (range("A", "E") as $column) {
+            $styles["{$column}3"] = [
+                'fill' => [
+                    'fillType' => Fill::FILL_SOLID,
+                    'startColor' => ['rgb' => '00B050'],
+                ],
+                'font' => [
+                    'bold' => true,
+                    'name' => 'Century Gothic',
+                    'size' => 11,
+                ],
+                'borders' => [
+                    'allBorders' => [
+                        'borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN,
+                        'color' => ['rgb' => '000000'],
+                    ],
+                ],
+            ];
+        }
+        $highestRow = $sheet->getHighestRow();
 
-    //      // Customize chart dimensions (width: 800px, height: 400px)
-    //     $chart->setTopLeftPosition('G2');
-    //     $chart->setBottomRightPosition('O20');
+        // Apply styles dynamically from row 4 to the last row
+        for ($row = 4; $row <= $highestRow; $row++) {
+            foreach (range("A", "E") as $column) {
 
-    //     return $chart;
-    // }
+                // Determine background color: grey for even rows, white for odd rows
+                $fillColor = ($row % 2 === 0) ? 'F2F2F2' : 'FFFFFF';
+
+                $sheet->getStyle("{$column}{$row}")->applyFromArray([
+                    'font' => [
+                        'name' => 'Century Gothic',
+                        'size' => 10,
+                    ],
+                    'alignment' => [
+                        'horizontal' => Alignment::HORIZONTAL_LEFT,
+                        'vertical' => Alignment::VERTICAL_CENTER,
+                    ],
+                    'borders' => [
+                        'allBorders' => [
+                            'borderStyle' => Border::BORDER_THIN,
+                            'color' => ['rgb' => '000000'],
+                        ],
+                    ],
+                    'fill' => [
+                        'fillType' => Fill::FILL_SOLID,
+                        'startColor' => [
+                            'rgb' => $fillColor,
+                        ],
+                    ],
+                ]);
+            }
+        }
+
+        return $styles;
+    }
+
+    public function defaultStyles(Style $defaultStyle)
+    {
+        $defaultStyle->getFont()->setName('Century Gothic')->setSize(10);
+
+        return $defaultStyle;
+    }
+
+    public function columnWidths(): array
+    {
+        return [
+            'A' => 15,
+            'B' => 15,
+            'C' => 15,
+            'D' => 15,
+            'E' => 15,
+        ];
+    }
+
+    public function columnFormats(): array
+    {
+        return [
+            "D" =>  '0.00%',
+            "E" =>  '0.00%',
+        ];
+    }
 }

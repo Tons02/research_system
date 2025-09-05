@@ -29,9 +29,6 @@ class VehicleCountController extends Controller
         $VehicleCount = VehicleCount::when($status === "inactive", function ($query) {
             $query->onlyTrashed();
         })
-            ->whereHas('target_locations', function ($query) use ($target_location_id) {
-                $query->where('target_location_id', $target_location_id);
-            })
             ->orderBy('date', 'desc')
             ->useFilters()
             ->dynamicPaginate();
@@ -41,41 +38,60 @@ class VehicleCountController extends Controller
         } else {
             $VehicleCount = VehicleCountResource::collection($VehicleCount);
         }
-        return $this->responseSuccess('Foot Count display successfully', $VehicleCount);
+        return $this->responseSuccess('Vehicle Count display successfully', $VehicleCount);
     }
 
     public function store(VehicleCountRequest $request)
     {
         $user = auth('sanctum')->user();
 
-        $target_location = TargetLocation::find($request->target_location_id);
+        $TodayDate = Carbon::now()->format('Y-m-d H:i:s');
 
-        // check if the user is tag on the target location vehicle count
-        if ($target_location->vehicle_counted_by_user_id != $user->id) {
-            return $this->responseUnprocessable('', 'You cannot insert vehicle counts because it is not tagged on your account. Please contact your supervisor or support.');
+        $target_location = TargetLocation::find($request["target_location_id"]);
+
+        // Finalization check
+        if (!$target_location->is_final) {
+            return $this->responseUnprocessable('', 'You cannot insert vehicle counts because it is not finalized. Please contact your supervisor or support.');
         }
 
-        // it can insert within the day
-        if (
-            $target_location->is_done == 1 &&
-            $request->date > $target_location->updated_at
-        ) {
-            return $this->responseUnprocessable('', 'You cannot insert vehicle counts because it is already done.');
+        //done checker
+        if ($target_location->is_done == 1) {
+            return $this->responseUnprocessable('', 'You cannot insert vehicle counts because it is already marked as done.');
         }
+
+        //date checker
+        if ($target_location->start_date > $TodayDate) {
+            return $this->responseUnprocessable('', 'You cannot insert vehicle counts because it is not started yet.');
+        }
+
 
         $create_vehicle_count = VehicleCount::create([
-            "date" => $request->date,
-            "time" => $request->time,
-            "time_period" => Carbon::parse($request->time)->format('A'),
-            "total_left" => $request->total_left,
-            "total_right" => $request->total_right,
-            "grand_total" => $request->total_left +  $request->total_right,
+            "target_location_id" => $request['target_location_id'],
+            "date" => $request['date'],
+            "time_range" => $request['time_range'],
+            "time_period" => $request['time_period'],
+            "total_left_private_car" => $request['total_left_private_car'],
+            "total_left_truck" => $request['total_left_truck'],
+            "total_left_jeepney" => $request['total_left_jeepney'],
+            "total_left_bus" => $request['total_left_bus'],
+            "total_left_tricycle" => $request['total_left_tricycle'],
+            "total_left_bicycle" => $request['total_left_bicycle'],
+            "total_left_e_bike" => $request['total_left_e_bike'],
+            "total_left" =>  $request['total_left_private_car'] + $request['total_left_truck'] + $request['total_left_jeepney'] + $request['total_left_bus'] + $request['total_left_tricycle'] + $request['total_left_bicycle'] + $request['total_left_e_bike'],
+            "total_right_private_car" => $request['total_right_private_car'],
+            "total_right_truck" => $request['total_right_truck'],
+            "total_right_jeepney" => $request['total_right_jeepney'],
+            "total_right_bus" => $request['total_right_bus'],
+            "total_right_tricycle" => $request['total_right_tricycle'],
+            "total_right_bicycle" => $request['total_right_bicycle'],
+            "total_right_e_bike" => $request['total_right_e_bike'],
+            "total_right" =>  $request['total_right_private_car'] + $request['total_right_truck'] + $request['total_right_jeepney'] + $request['total_right_bus'] + $request['total_right_tricycle'] + $request['total_right_bicycle'] + $request['total_right_e_bike'],
+            "grand_total" =>  $request['total_right_private_car'] + $request['total_right_truck'] + $request['total_right_jeepney'] + $request['total_right_bus'] + $request['total_right_tricycle'] + $request['total_right_bicycle'] + $request['total_right_e_bike'] +
+                $request['total_left_private_car'] + $request['total_left_truck'] + $request['total_left_jeepney'] + $request['total_left_bus'] + $request['total_left_tricycle'] + $request['total_left_bicycle'] + $request['total_left_e_bike'],
             "surveyor_id" => $user->id,
+            "sync_at" => Carbon::now(),
+            "created_at" => $request['created_at'],
         ]);
-
-        if ($request->target_location_id) {
-            $create_vehicle_count->target_locations()->attach($request->target_location_id);
-        }
 
 
         return $this->responseCreated('Vehicle Count Successfully Created', $create_vehicle_count);
@@ -89,18 +105,34 @@ class VehicleCountController extends Controller
             return $this->responseUnprocessable('', 'Invalid ID provided for updating. Please check the ID and try again.');
         }
 
-        $vehicle_count->total_left = $request['total_left'];
-        $vehicle_count->total_right = $request['total_right'];
-        $vehicle_count->grand_total = $request['total_left'] + $request['total_right'];
-
-        if (!$vehicle_count->isDirty()) {
-            return $this->responseSuccess('No Changes', $vehicle_count);
-        }
-
-        $vehicle_count->save();
+        $vehicle_count->update([
+            "date" => $request['date'],
+            "time_range" => $request['time_range'],
+            "time_period" => $request['time_period'],
+            "total_left_private_car" => $request['total_left_private_car'],
+            "total_left_truck" => $request['total_left_truck'],
+            "total_left_jeepney" => $request['total_left_jeepney'],
+            "total_left_bus" => $request['total_left_bus'],
+            "total_left_tricycle" => $request['total_left_tricycle'],
+            "total_left_bicycle" => $request['total_left_bicycle'],
+            "total_left_e_bike" => $request['total_left_e_bike'],
+            "total_left" => $request['total_left_private_car'] + $request['total_left_truck'] + $request['total_left_jeepney'] + $request['total_left_bus'] + $request['total_left_tricycle'] + $request['total_left_bicycle'] + $request['total_left_e_bike'],
+            "total_right_private_car" => $request['total_right_private_car'],
+            "total_right_truck" => $request['total_right_truck'],
+            "total_right_jeepney" => $request['total_right_jeepney'],
+            "total_right_bus" => $request['total_right_bus'],
+            "total_right_tricycle" => $request['total_right_tricycle'],
+            "total_right_bicycle" => $request['total_right_bicycle'],
+            "total_right_e_bike" => $request['total_right_e_bike'],
+            "total_right" => $request['total_right_private_car'] + $request['total_right_truck'] + $request['total_right_jeepney'] + $request['total_right_bus'] + $request['total_right_tricycle'] + $request['total_right_bicycle'] + $request['total_right_e_bike'],
+            "grand_total" =>
+            $request['total_right_private_car'] + $request['total_right_truck'] + $request['total_right_jeepney'] + $request['total_right_bus'] + $request['total_right_tricycle'] + $request['total_right_bicycle'] + $request['total_right_e_bike'] +
+                $request['total_left_private_car'] + $request['total_left_truck'] + $request['total_left_jeepney'] + $request['total_left_bus'] + $request['total_left_tricycle'] + $request['total_left_bicycle'] + $request['total_left_e_bike'],
+        ]);
 
         return $this->responseSuccess('Vehicle Count successfully updated', $vehicle_count);
     }
+
 
     public function archived(Request $request, $id)
     {
@@ -126,7 +158,8 @@ class VehicleCountController extends Controller
     public function export(VehicleCountExportRequest $request)
     {
         $target_locations = $request->query('target_location_id');
+        $surveyor_id = $request->query('surveyor_id');
 
-        return Excel::download(new TrafficCountExport($target_locations), 'Vehicle Counts.xlsx');
+        return Excel::download(new TrafficCountExport($target_locations, $surveyor_id), 'Vehicle Counts.xlsx');
     }
 }

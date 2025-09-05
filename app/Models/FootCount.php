@@ -12,13 +12,20 @@ class FootCount extends Model
 {
     use HasFactory, SoftDeletes, Filterable;
     protected $fillable = [
+        'target_location_id',
         'date',
-        'time',
+        'time_range',
         'time_period',
+        'total_left_male',
+        'total_right_male',
         'total_male',
+        'total_left_female',
+        'total_right_female',
         'total_female',
         'grand_total',
-        'surveyor_id'
+        'surveyor_id',
+        'sync_at',
+        'created_at'
     ];
 
     protected $hidden = [
@@ -27,17 +34,9 @@ class FootCount extends Model
 
     protected string $default_filters = FootCountFilter::class;
 
-
     public function target_locations()
     {
-        return $this->belongsToMany(
-            TargetLocation::class,
-            "target_locations_foot_counts",
-            "foot_count_id",
-            "target_location_id",
-            "id",
-            "id"
-        );
+        return $this->belongsTo(TargetLocation::class, 'target_location_id')->withTrashed();
     }
 
     public function surveyor()

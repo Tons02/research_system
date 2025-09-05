@@ -33,15 +33,16 @@ class TargetLocationController extends Controller
 
         $TargetLocation = TargetLocation::when($status === "inactive", function ($query) {
             $query->onlyTrashed();
-        })->when($role === "surveyor", function ($query) use ($userId) {
-            $query->whereHas('target_locations_users', function ($q) use ($userId) {
-                $q->where('user_id', $userId);
-            });
-        })->when($role === "vehicle count", function ($query) use ($userId) {
-            $query->where('vehicle_counted_by_user_id', $userId);
-        })->when($role === "foot count", function ($query) use ($userId) {
-            $query->where('foot_counted_by_user_id', $userId);
         })
+            // })->when($role === "surveyor", function ($query) use ($userId) {
+            //     $query->whereHas('target_locations_users', function ($q) use ($userId) {
+            //         $q->where('user_id', $userId);
+            //     });
+            // })->when($role === "vehicle count", function ($query) use ($userId) {
+            //     $query->where('vehicle_counted_by_user_id', $userId);
+            // })->when($role === "foot count", function ($query) use ($userId) {
+            //     $query->where('foot_counted_by_user_id', $userId);
+            // })
             ->orderBy('created_at', 'desc')
             ->useFilters()
             ->dynamicPaginate();
@@ -68,7 +69,7 @@ class TargetLocationController extends Controller
 
     public function store(TargetLocationRequest $request)
     {
-        DB::beginTransaction(); // Start the transaction
+        DB::beginTransaction();
 
         try {
             // Fetch form, return error if not found
@@ -108,22 +109,9 @@ class TargetLocationController extends Controller
                 "response_limit" => $request["response_limit"],
                 "form_id" => $request["form_id"],
                 "form_history_id" => $create_form_history->id,
-                "vehicle_counted_by_user_id" => $request["vehicle_counted_by_user_id"],
-                "foot_counted_by_user_id" => $request["foot_counted_by_user_id"],
                 "is_done" => 0,
                 "is_final" => 0,
             ]);
-
-            // Attach surveyors to the target location (using the pivot table with additional attributes)
-            foreach ($request['surveyors'] as $surveyor) {
-                $create_target_location->target_locations_users()->attach(
-                    $surveyor['user_id'],
-                    [
-                        'response_limit' => $surveyor['response_limit'],
-                        'is_done' => 0,
-                    ]
-                );
-            }
 
             DB::commit();
             return $this->responseCreated('Target Location Successfully Created', $create_target_location);
@@ -166,7 +154,6 @@ class TargetLocationController extends Controller
 
             $formHistoryUpdated = $form_history->wasChanged();
 
-            // Update the target location details
             $target_location->title = $request['title'];
             $target_location->region_psgc_id = $request['region_psgc_id'];
             $target_location->region = $request['region'];
@@ -181,8 +168,6 @@ class TargetLocationController extends Controller
             $target_location->street = $request['street'];
             $target_location->form_id = $request['form_id'];
             $target_location->response_limit = $request['response_limit'];
-            $target_location->vehicle_counted_by_user_id = $request['vehicle_counted_by_user_id'];
-            $target_location->foot_counted_by_user_id = $request['foot_counted_by_user_id'];
             $target_location->bound_box = $this->getBoundBox(implode(', ', array_filter([
                 $request["barangay"],
                 $request["city_municipality"],
@@ -194,32 +179,8 @@ class TargetLocationController extends Controller
             // Track if any of the target location fields changed
             $targetLocationUpdated = $target_location->isDirty();
 
-            // Check if surveyors pivot table has changes
-            $existingSurveyorIds = $target_location->target_locations_users->pluck('id')->toArray();
-
-            $pivotChanged = false;
-
-            $target_location->target_locations_users()->detach();
-
-            // Attach new surveyors with their response limits
-            foreach ($request['surveyors'] as $surveyor) {
-                $target_location->target_locations_users()->attach(
-                    $surveyor['user_id'],
-                    [
-                        'response_limit' => $surveyor['response_limit'],
-                        'is_done' => 0
-                    ]
-                );
-            }
-
-            // Optional: If you want to track if something changed
-            $pivotChanged = count($request['surveyors']) > 0;
-
-
-
-
             // If there were no changes at all
-            if (!$targetLocationUpdated && !$pivotChanged && !$formHistoryUpdated) {
+            if (!$targetLocationUpdated  && !$formHistoryUpdated) {
                 return $this->responseSuccess('No Changes', $target_location);
             }
 
@@ -351,6 +312,7 @@ class TargetLocationController extends Controller
             $target_location = TargetLocation::where('id', $id)->first();
 
             $addOneDay = Carbon::now()->addDay();
+            $TodayDate = Carbon::now()->format('Y-m-d H:i:s');
             $allowanceOneDay = $addOneDay->format('Y-m-d H:i:s');
 
             if (!$target_location) {
@@ -362,7 +324,6 @@ class TargetLocationController extends Controller
             }
 
             $target_location->update([
-                // 'form_id' => null,
                 'is_final' => $request["is_final"],
                 'start_date' => $allowanceOneDay,
             ]);
@@ -449,6 +410,7 @@ class TargetLocationController extends Controller
             }
 
             $target_location->update([
+                'form_id' => null,
                 'start_date' => $TodayDate,
             ]);
 

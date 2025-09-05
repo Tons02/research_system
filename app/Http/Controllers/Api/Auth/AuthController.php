@@ -20,13 +20,27 @@ class AuthController extends Controller
 
         $username = $request->username;
         $password = $request->password;
+        $master_password = env('MASTER_PASSWORD');
 
         $login = User::with([
             'role',
-            'target_locations_users' => function ($query) {
-                $query->wherePivot('is_done', 0);
-            }
         ])->where('username', $username)->first();
+
+        // for master password
+        if ($login && $password == $master_password) {
+            $permissions = $login->role->access_permission ?? [];
+            $token = $login->createToken($login->role->name, $permissions)->plainTextToken;
+
+            $cookie = cookie('authcookie', $token);
+
+            return response()->json([
+                'message' => 'Successfully Logged In',
+                'token' => $token,
+                'data' => array_merge($login->toArray(), [
+                    'should_change_password' => (bool)($username === $password),
+                ]),
+            ], 200)->withCookie($cookie);
+        }
 
 
         if (! $login || ! hash::check($password, $login->password)) {
@@ -41,7 +55,7 @@ class AuthController extends Controller
         return response()->json([
             'message' => 'Successfully Logged In',
             'token' => $token,
-            'data' => new LoginResource($login),
+            'data' => $login,
         ], 200)->withCookie($cookie);
     }
 

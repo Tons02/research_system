@@ -15,13 +15,6 @@ use App\Http\Controllers\Api\TargetLocationController;
 use App\Http\Controllers\Api\VehicleCountController;
 
 Route::post('login', [AuthController::class, 'login']);
-// // ymir coa
-// Route::resource("companies", CompanyController::class);
-// Route::resource("business-units", BusinessUnitController::class);
-// Route::resource("departments", DepartmentController::class);
-// Route::resource("units", UnitController::class);
-// Route::resource("sub-units", SubUnitController::class);
-// Route::resource("locations", LocationController::class);
 
 // // Role Controller
 // Route::put('role-archived/{id}', [RoleController::class, 'archived']);

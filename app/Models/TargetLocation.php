@@ -31,8 +31,6 @@ class TargetLocation extends Model
         'form_history_id',
         'is_done',
         'is_final',
-        'vehicle_counted_by_user_id',
-        'foot_counted_by_user_id',
         'start_date',
         'end_date',
     ];
@@ -59,31 +57,4 @@ class TargetLocation extends Model
         'is_final' => 'boolean',
         'is_done' => 'boolean',
     ];
-
-    public function target_locations_users()
-    {
-        return $this->belongsToMany(
-            User::class,
-            "target_locations_users",
-            "target_location_id",
-            "user_id",
-            "id",
-            "id"
-        )
-            ->using(TargetLocationUsers::class)
-            ->withTimestamps()
-            ->withTrashed()
-            ->withPivot(['response_limit', 'is_done', 'deleted_at']);
-    }
-
-
-    public function vehicle_counted_by_user()
-    {
-        return $this->belongsTo(User::class, 'vehicle_counted_by_user_id')->withTrashed();
-    }
-
-    public function foot_counted_by_user()
-    {
-        return $this->belongsTo(User::class, 'foot_counted_by_user_id')->withTrashed();
-    }
 }

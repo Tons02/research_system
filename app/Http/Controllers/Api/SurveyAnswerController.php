@@ -58,63 +58,32 @@ class SurveyAnswerController extends Controller
     public function store(SurveyAnswerRequest $request)
     {
         $user = auth('sanctum')->user();
+        $TodayDate = Carbon::now()->format('Y-m-d H:i:s');
 
-        // Check if user has access to the location (either active or historical)
-        $activeLocation = $user->loadMissing('target_locations_users')
-            ->target_locations_users
-            ->firstWhere('id', $request["target_location_id"]);
-
-        $historicalLocation = $user->loadMissing('target_locations_users_history')
-            ->target_locations_users_history
-            ->firstWhere('id', $request["target_location_id"]);
-
-        // Access validation
-        if (! $activeLocation && ! $historicalLocation) {
-            return $this->responseUnprocessable('', 'You cannot take survey on this location, only on your tagged location.');
-        }
-
-        // Prioritize historical record if it exists, otherwise use active
-        $location = $historicalLocation ?: $activeLocation;
+        $target_location = TargetLocation::find($request["target_location_id"]);
 
         // Finalization check
-        if (! $location->is_final) {
+        if (!$target_location->is_final) {
             return $this->responseUnprocessable('', 'You cannot take the survey because it is not finalized. Please contact your supervisor or support.');
         }
 
         //done checker
-        if ($location->is_done == 1) {
+        if ($target_location->is_done == 1) {
             return $this->responseUnprocessable('', 'You cannot take the survey because it is already marked as done.');
         }
 
-        // Count how many surveys the user has already submitted
-        $total_survey_of_surveyor = SurveyAnswer::where('target_location_id', $request["target_location_id"])
-            ->where('surveyor_id', $user->id)
+        //date checker
+        if ($target_location->start_date > $TodayDate) {
+            return $this->responseUnprocessable('', 'You cannot take the survey because it is not started yet.');
+        }
+
+        $total_surveys = SurveyAnswer::where('target_location_id', $request["target_location_id"])
             ->count();
 
-        // Response limit validation
-        $pivotLimit = optional($location->pivot)->response_limit;
-        $locationLimit = $location->response_limit;
-
-        if ($pivotLimit === $locationLimit && $total_survey_of_surveyor > $locationLimit) {
-            $target_location = TargetLocation::find($location->id);
-
-            if (! $target_location) {
-                return $this->responseUnprocessable('', 'Invalid ID provided. Please check the ID and try again.');
-            }
-
-            return $this->responseUnprocessable('', 'Survey is done');
+        // validation for response limit
+        if ($target_location->response_limit == $total_surveys) {
+            return $this->responseUnprocessable('', 'You have reached the maximum number of responses for this target location.');
         }
-
-
-        if ($total_survey_of_surveyor >= $locationLimit) {
-            return $this->responseUnprocessable('', 'You have reached the maximum number of responses allowed for your account.');
-        }
-
-        // If user exceeded either limit, stop them
-        if ($pivotLimit !== null && $total_survey_of_surveyor >= $pivotLimit) {
-            return $this->responseUnprocessable('', 'You cannot create more surveys than you are tagged for.');
-        }
-
 
         DB::beginTransaction();
 
@@ -192,18 +161,6 @@ class SurveyAnswerController extends Controller
                     }
                 }
             }
-
-            // $total_survey_of_surveyor_after_creating = SurveyAnswer::where('target_location_id', $request["target_location_id"])
-            //     ->where('surveyor_id', $user->id)
-            //     ->count();
-
-            // if ($total_survey_of_surveyor_after_creating === $pivotLimit) {
-            //     // Find the target location pivot record
-            //     $user->target_locations_users()
-            //         ->updateExistingPivot($request["target_location_id"], [
-            //             'is_done' => 1
-            //         ]);
-            // }
 
             DB::commit();
             return $this->responseCreated('Survey Answer Successfully Synced', $create_survey_answer);

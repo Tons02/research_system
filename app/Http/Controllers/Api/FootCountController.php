@@ -28,9 +28,6 @@ class FootCountController extends Controller
         $FootCount = FootCount::when($status === "inactive", function ($query) {
             $query->onlyTrashed();
         })
-            ->whereHas('target_locations', function ($query) use ($target_location_id) {
-                $query->where('target_location_id', $target_location_id);
-            })
             ->orderBy('date', 'desc')
             ->useFilters()
             ->dynamicPaginate();
@@ -47,34 +44,41 @@ class FootCountController extends Controller
     {
         $user = auth('sanctum')->user();
 
-        $target_location = TargetLocation::find($request->target_location_id);
+        $TodayDate = Carbon::now()->format('Y-m-d H:i:s');
 
-        // check if the user is tag on the target location foot count
-        if ($target_location->foot_counted_by_user_id != $user->id) {
-            return $this->responseUnprocessable('', 'You cannot insert foot counts because it is not tagged on your account. Please contact your supervisor or support.');
+        $target_location = TargetLocation::find($request["target_location_id"]);
+
+        // Finalization check
+        if (!$target_location->is_final) {
+            return $this->responseUnprocessable('', 'You cannot insert foot counts because it is not finalized. Please contact your supervisor or support.');
         }
 
-        // it can insert within the day
-        if (
-            $target_location->is_done == 1 &&
-            $request->date > $target_location->updated_at
-        ) {
-            return $this->responseUnprocessable('', 'You cannot insert foot counts because it is already done.');
+        //done checker
+        if ($target_location->is_done == 1) {
+            return $this->responseUnprocessable('', 'You cannot insert foot counts because it is already marked as done.');
+        }
+
+        //date checker
+        if ($target_location->start_date > $TodayDate) {
+            return $this->responseUnprocessable('', 'You cannot insert foot counts because it is not started yet.');
         }
 
         $create_foot_count = FootCount::create([
-            "date" => $request->date,
-            "time" => $request->time,
-            "time_period" => Carbon::parse($request->time)->format('A'),
-            "total_male" => $request->total_male,
-            "total_female" => $request->total_female,
-            "grand_total" => $request->total_male +  $request->total_female,
+            "target_location_id" => $request['target_location_id'],
+            "date" => $request['date'],
+            "time_range" => $request['time_range'],
+            "time_period" => $request['time_period'],
+            "total_left_male" => $request['total_left_male'],
+            "total_right_male" => $request['total_left_male'],
+            "total_male" => $request['total_left_male'] + $request['total_right_male'],
+            "total_left_female" => $request['total_left_male'],
+            "total_right_female" => $request['total_left_female'],
+            "total_female" => $request['total_left_female'] + $request['total_right_female'],
+            "grand_total" => $request['total_left_male'] + $request['total_right_male'] + $request['total_left_female'] + $request['total_right_female'],
             "surveyor_id" => $user->id,
+            "sync_at" => Carbon::now(),
+            "created_at" => $request['created_at'],
         ]);
-
-        if ($request->target_location_id) {
-            $create_foot_count->target_locations()->attach($request->target_location_id);
-        }
 
         return $this->responseCreated('Foot Count Successfully Created', $create_foot_count);
     }
@@ -87,9 +91,28 @@ class FootCountController extends Controller
             return $this->responseUnprocessable('', 'Invalid ID provided for updating. Please check the ID and try again.');
         }
 
-        $foot_count->total_male = $request['total_male'];
-        $foot_count->total_female = $request['total_female'];
-        $foot_count->grand_total = $request['total_male'] + $request['total_female'];
+        $target_location = TargetLocation::find($foot_count->target_location_id);
+
+        // Finalization check
+        if (!$target_location->is_final) {
+            return $this->responseUnprocessable('', 'You cannot insert foot count because it is not finalized. Please contact your supervisor or support.');
+        }
+
+        //done checker
+        if ($target_location->is_done == 1) {
+            return $this->responseUnprocessable('', 'You cannot insert foot count because it is already marked as done.');
+        }
+
+        $foot_count->date = $request['date'];
+        $foot_count->time_range = $request['time_range'];
+        $foot_count->time_period = $request['time_period'];
+        $foot_count->total_left_male = $request['total_left_male'];
+        $foot_count->total_right_male = $request['total_right_male'];
+        $foot_count->total_male = $request['total_left_male'] + $request['total_right_male'];
+        $foot_count->total_left_female = $request['total_left_female'];
+        $foot_count->total_right_female = $request['total_right_female'];
+        $foot_count->total_female = $request['total_left_female'] + $request['total_right_female'];
+        $foot_count->grand_total = $request['total_left_male'] + $request['total_right_male'] + $request['total_left_female'] + $request['total_right_female'];
 
         if (!$foot_count->isDirty()) {
             return $this->responseSuccess('No Changes', $foot_count);
@@ -124,7 +147,8 @@ class FootCountController extends Controller
     public function export(VehicleCountExportRequest $request)
     {
         $target_location_id = $request->query('target_location_id', null);
+        $surveyor_id = $request->query('surveyor_id', null);
 
-        return Excel::download(new TrafficFootCountExport($target_location_id), 'Foot Counts.xlsx');
+        return Excel::download(new TrafficFootCountExport($target_location_id, $surveyor_id), 'Foot Counts.xlsx');
     }
 }

@@ -17,17 +17,20 @@ class FootCountResource extends JsonResource
         return [
             'id' => $this->id,
             'date' => $this->date,
-            'time' => $this->time,
+            'time_range' => $this->time_range,
             'time_period' => $this->time_period,
+            'total_left_male' => $this->total_left_male,
+            'total_right_male' => $this->total_right_male,
             'total_male' => $this->total_male,
+            'total_left_female' => $this->total_left_female,
+            'total_right_female' => $this->total_right_female,
             'total_female' => $this->total_female,
             'grand_total' => $this->grand_total,
             'surveyor' => [
                 'id' => $this->surveyor->id,
                 'name' => $this->surveyor->first_name . ' ' . $this->surveyor->middle_name . ' ' . $this->surveyor->last_name,
             ],
-            'target_location' => $this->target_locations,
-            'target_location' => [
+            'target_locations' => [
                 'id' => $this->target_locations->first()?->id,
                 'target_locations' => implode(', ', array_filter([
                     $this->target_locations->first()?->region ?? null,
@@ -37,6 +40,7 @@ class FootCountResource extends JsonResource
                     $this->target_locations->first()?->barangay ?? null,
                 ])),
             ],
+            'sync_at' => $this->sync_at,
             'created_at' => $this->created_at
         ];
     }

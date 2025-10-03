@@ -3,6 +3,7 @@
 namespace App\Exports\TrafficCounts;
 
 use App\Models\VehicleCount;
+use Carbon\Carbon;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithColumnWidths;
 use Maatwebsite\Excel\Concerns\WithDefaultStyles;
@@ -92,6 +93,8 @@ class VehicleBreakdownExport implements FromCollection, WithHeadings, WithStyles
                 'TOTAL RIGHT',
                 'GRAND TOTAL',
                 'SURVEYOR',
+                'CREATED AT',
+                'SYNC AT',
             ]
         ];
     }
@@ -131,6 +134,8 @@ class VehicleBreakdownExport implements FromCollection, WithHeadings, WithStyles
             $totalRight,
             $grandTotal,
             $surveyorName,
+            Carbon::parse($vehicle_count->created_at)->format('M d, Y h:i A'),
+            Carbon::parse($vehicle_count->sync_at)->format('M d, Y h:i A'),
         ];
     }
 
@@ -151,9 +156,9 @@ class VehicleBreakdownExport implements FromCollection, WithHeadings, WithStyles
 
     public function styles(Worksheet $sheet)
     {
-        $sheet->mergeCells('A1:V2');
+        $sheet->mergeCells('A1:X2');
 
-        $sheet->getStyle('A1:V2')->applyFromArray([
+        $sheet->getStyle('A1:X2')->applyFromArray([
             'alignment' => [
                 'horizontal' => Alignment::HORIZONTAL_CENTER,
                 'vertical'   => Alignment::VERTICAL_CENTER,
@@ -169,7 +174,7 @@ class VehicleBreakdownExport implements FromCollection, WithHeadings, WithStyles
             ],
         ]);
 
-        $sheet->getStyle('A3:V3')->applyFromArray([
+        $sheet->getStyle('A3:X3')->applyFromArray([
             'alignment' => [
                 'horizontal' => Alignment::HORIZONTAL_CENTER,
                 'vertical'   => Alignment::VERTICAL_CENTER,
@@ -178,7 +183,7 @@ class VehicleBreakdownExport implements FromCollection, WithHeadings, WithStyles
 
         $styles = [];
 
-        foreach (range("A", "V") as $column) {
+        foreach (range("A", "X") as $column) {
             $styles["{$column}3"] = [
                 'fill' => [
                     'fillType' => Fill::FILL_SOLID,
@@ -202,7 +207,7 @@ class VehicleBreakdownExport implements FromCollection, WithHeadings, WithStyles
 
         // Apply styles dynamically from row 4 to the last row
         for ($row = 4; $row <= $highestRow; $row++) {
-            foreach (range("A", "V") as $column) {
+            foreach (range("A", "X") as $column) {
                 // Determine background color: grey for even rows, white for odd rows
                 $fillColor = ($row % 2 === 0) ? 'F2F2F2' : 'FFFFFF';
 
@@ -265,7 +270,9 @@ class VehicleBreakdownExport implements FromCollection, WithHeadings, WithStyles
             'S' => 12,  // TOTAL LEFT
             'T' => 13,  // TOTAL RIGHT
             'U' => 15,  // GRAND TOTAL
-            'V' => 22,  // SURVEYOR
+            'V' => 25,  // SURVEYOR
+            'W' => 25,  // SURVEYOR
+            'X' => 25,  // SURVEYOR
         ];
     }
 }

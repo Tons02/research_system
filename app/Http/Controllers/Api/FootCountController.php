@@ -22,7 +22,6 @@ class FootCountController extends Controller
     {
 
         $status = $request->query('status');
-        $target_location_id = $request->query('target_location_id');
         $pagination = $request->query('pagination');
 
         $FootCount = FootCount::when($status === "inactive", function ($query) {

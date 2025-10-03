@@ -39,9 +39,10 @@ class FootCountResource extends JsonResource
                     $this->target_locations->first()?->sub_municipality ?? null,
                     $this->target_locations->first()?->barangay ?? null,
                 ])),
+                'is_done' => $this->target_locations->first()?->is_done,
             ],
             'sync_at' => $this->sync_at,
             'created_at' => $this->created_at
         ];
-    }
+    } 
 }

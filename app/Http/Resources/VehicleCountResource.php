@@ -41,7 +41,7 @@ class VehicleCountResource extends JsonResource
                 'name' => $this->surveyor->first_name . ' ' . $this->surveyor->middle_name . ' ' . $this->surveyor->last_name,
             ],
             'target_location' => $this->target_locations,
-            'target_location' => [
+            'target_locations' => [
                 'id' => $this->target_locations->first()?->id,
                 'target_locations' => implode(', ', array_filter([
                     $this->target_locations->first()?->region ?? null,
@@ -50,6 +50,7 @@ class VehicleCountResource extends JsonResource
                     $this->target_locations->first()?->sub_municipality ?? null,
                     $this->target_locations->first()?->barangay ?? null,
                 ])),
+                'is_done' => $this->target_locations->first()?->is_done,
             ],
             'sync_at' => $this->sync_at,
             'created_at' => $this->created_at

@@ -69,7 +69,7 @@ class SurveyAnswerController extends Controller
 
         //done checker
         if ($target_location->is_done == 1) {
-            return $this->responseUnprocessable('', 'You cannot take the survey because it is already marked as done.');
+            return $this->responseUnprocessable('', 'Submit failed: this survey has already been marked as completed.');
         }
 
         //date checker
@@ -110,6 +110,8 @@ class SurveyAnswerController extends Controller
                 "house_rent" => $request["house_rent"],
                 "questionnaire_answer" => $request["questionnaire_answer"],
                 "surveyor_id" => auth('sanctum')->user()->id,
+                "sync_at" => Carbon::now(),
+                "created_at" => $request['created_at'],
             ]);
 
             $questionnaire_answers = $request->input('questionnaire_answer', []); // Ensure it's an array

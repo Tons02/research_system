@@ -84,7 +84,7 @@ class VehicleCountExport implements
     public function headings(): array
     {
         return [
-            ["VEHICLE COUNT Summary"],
+            ["VEHICLE COUNT SUMMARY"],
             [],
             [
                 'DATE',

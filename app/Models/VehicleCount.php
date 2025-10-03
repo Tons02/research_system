@@ -54,4 +54,20 @@ class VehicleCount extends Model
     {
         return $this->belongsTo(User::class, 'surveyor_id')->withTrashed();
     }
+
+    protected $casts = [
+        'total_left_private_car' => 'integer',
+        'total_right_private_car' => 'integer',
+        'total_left_truck' => 'integer',
+        'total_right_truck' => 'integer',
+        'total_left_jeepney' => 'integer',
+        'total_right_jeepney' => 'integer',
+        'total_right_bus' => 'integer',
+        'total_left_tricycle' => 'integer',
+        'total_right_tricycle' => 'integer',
+        'total_left_bicycle' => 'integer',
+        'total_right_bicycle' => 'integer',
+        'total_left_e_bike' => 'integer',
+        'total_right_e_bike' => 'integer',
+    ];
 }

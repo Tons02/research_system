@@ -35,6 +35,7 @@ class TargetLocationResource extends JsonResource
             'barangay_psgc_id' => $this->barangay_psgc_id,
             'barangay' => $this->barangay,
             'street' => $this->street,
+            'mobile_locations' => $this->mobile_locations,
             'bound_box' => $this->bound_box,
             'response_limit' => $this->response_limit,
             'form_history_id' => $this->form_history_id,

@@ -34,15 +34,6 @@ class TargetLocationController extends Controller
         $TargetLocation = TargetLocation::when($status === "inactive", function ($query) {
             $query->onlyTrashed();
         })
-            // })->when($role === "surveyor", function ($query) use ($userId) {
-            //     $query->whereHas('target_locations_users', function ($q) use ($userId) {
-            //         $q->where('user_id', $userId);
-            //     });
-            // })->when($role === "vehicle count", function ($query) use ($userId) {
-            //     $query->where('vehicle_counted_by_user_id', $userId);
-            // })->when($role === "foot count", function ($query) use ($userId) {
-            //     $query->where('foot_counted_by_user_id', $userId);
-            // })
             ->orderBy('created_at', 'desc')
             ->useFilters()
             ->dynamicPaginate();
@@ -99,6 +90,7 @@ class TargetLocationController extends Controller
                 "barangay_psgc_id" => $request["barangay_psgc_id"],
                 "barangay" => $request["barangay"],
                 "street" => $request["street"],
+                "mobile_locations" => $request["mobile_locations"],
                 "bound_box" => $this->getBoundBox(implode(', ', array_filter([
                     $request["barangay"],
                     $request["city_municipality"],
@@ -166,6 +158,7 @@ class TargetLocationController extends Controller
             $target_location->barangay_psgc_id = $request['barangay_psgc_id'];
             $target_location->barangay = $request['barangay'];
             $target_location->street = $request['street'];
+            $target_location->mobile_locations = $request['mobile_locations'];
             $target_location->form_id = $request['form_id'];
             $target_location->response_limit = $request['response_limit'];
             $target_location->bound_box = $this->getBoundBox(implode(', ', array_filter([
@@ -312,7 +305,6 @@ class TargetLocationController extends Controller
             $target_location = TargetLocation::where('id', $id)->first();
 
             $addOneDay = Carbon::now()->addDay();
-            $TodayDate = Carbon::now()->format('Y-m-d H:i:s');
             $allowanceOneDay = $addOneDay->format('Y-m-d H:i:s');
 
             if (!$target_location) {
@@ -322,6 +314,16 @@ class TargetLocationController extends Controller
             if ($target_location->is_final == 1) {
                 return $this->responseUnprocessable('', 'The survey on this target location is already started');
             }
+
+            $form = Form::find($target_location->form_id);
+
+            $form_history = FormHistories::find($target_location->form_history_id);
+
+            $form_history->update([
+                'title' => $form->title,
+                'description' => $form->description,
+                'sections' => $form->sections,
+            ]);
 
             $target_location->update([
                 'is_final' => $request["is_final"],
@@ -358,10 +360,6 @@ class TargetLocationController extends Controller
                 'is_done' => $request["is_done"],
                 'end_date' => $TodayDate,
             ]);
-
-            DB::table('target_locations_users')
-                ->where('target_location_id', $target_location->id)
-                ->update(['is_done' =>  $request["is_done"]]);
 
             DB::commit();
             return $this->responseSuccess('Target Location successfully ended', $target_location);
@@ -409,6 +407,16 @@ class TargetLocationController extends Controller
                 return $this->responseUnprocessable('', 'The survey countdown for this location has already started.');
             }
 
+            $form = Form::find($target_location->form_id);
+
+            $form_history = FormHistories::find($target_location->form_history_id);
+
+            $form_history->update([
+                'title' => $form->title,
+                'description' => $form->description,
+                'sections' => $form->sections,
+            ]);
+
             $target_location->update([
                 'form_id' => null,
                 'start_date' => $TodayDate,
@@ -425,7 +433,18 @@ class TargetLocationController extends Controller
     public function target_location_users(Request $request)
     {
         $target_location_id = $request->query('target_location_id');
-        $target_location_users =  TargetLocation::with('target_locations_users', 'vehicle_counted_by_user', 'foot_counted_by_user')->where('id', $target_location_id)->get();
-        return $this->responseSuccess('User for specific Target Location display successfully', $target_location_users);
+
+        // Fetch users who participated in survey for this target location
+        $target_location_users_for_survey = SurveyAnswer::with('surveyor')
+            ->where('target_location_id', $target_location_id)
+            ->get()
+            ->pluck('surveyor')
+            ->unique('id')
+            ->values();
+
+        return $this->responseSuccess(
+            'Users for specific Target Location displayed successfully',
+            $target_location_users_for_survey
+        );
     }
 }

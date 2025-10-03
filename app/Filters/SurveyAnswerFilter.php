@@ -9,6 +9,7 @@ class SurveyAnswerFilter extends QueryFilters
     protected array $allowedFilters = [];
 
     protected array $columnSearch = [
+        'id',
         'name'
     ];
 

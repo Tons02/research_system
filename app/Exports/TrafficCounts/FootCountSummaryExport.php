@@ -87,7 +87,7 @@ class FootCountSummaryExport implements
     public function headings(): array
     {
         return [
-            ["FOOT COUNT Summary"],
+            ["FOOT COUNT SUMMMARY"],
             [],
             [
                 'DATE',

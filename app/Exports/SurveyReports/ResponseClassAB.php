@@ -137,20 +137,6 @@ class ResponseClassAB implements FromCollection, WithMapping, WithHeadings, With
         return [
             AfterSheet::class => function (AfterSheet $event) {
 
-                // 👇 Define it here
-                $maskName = function ($fullName) {
-                    $parts = explode(' ', $fullName);
-                    $masked = [];
-
-                    foreach ($parts as $part) {
-                        if (strlen($part) > 0) {
-                            $masked[] = substr($part, 0, 1) . str_repeat('*', strlen($part) - 1);
-                        }
-                    }
-
-                    return implode(' ', $masked);
-                };
-
                 $sheet = $event->sheet;
                 $row = 2;
 
@@ -184,11 +170,7 @@ class ResponseClassAB implements FromCollection, WithMapping, WithHeadings, With
                             $sheet->getStyle("B{$row}")->getNumberFormat()
                                 ->setFormatCode(\PhpOffice\PhpSpreadsheet\Style\NumberFormat::FORMAT_TEXT);
 
-                            $answerText = strtolower($question['question']) === 'name'
-                                ? $maskName($answer['answer']) // 👈 Use closure
-                                : $answer['answer'];
-
-                            $sheet->setCellValueExplicit("B{$row}", $answerText, \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
+                            $sheet->setCellValueExplicit("B{$row}", $answer['answer'], \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
                             $sheet->getStyle("B{$row}")->getFont()->setName('Century Gothic')->setSize(9);
                             $sheet->setCellValue("C{$row}", $answer['count']);
                             $sheet->getStyle("C{$row}")->getFont()->setName('Century Gothic')->setSize(9);

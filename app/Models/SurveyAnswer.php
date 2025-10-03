@@ -31,10 +31,12 @@ class SurveyAnswer extends Model
         'ownership_of_house',
         'house_rent',
         'questionnaire_answer',
-        'surveyor_id'
+        'surveyor_id',
+        'sync_at',
+        'created_at',
     ];
 
-    public function user()
+    public function surveyor()
     {
         return $this->belongsTo(User::class, 'surveyor_id')->withTrashed();
     }

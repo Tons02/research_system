@@ -3,6 +3,7 @@
 namespace App\Exports\TrafficCounts;
 
 use App\Models\FootCount;
+use Carbon\Carbon;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithColumnWidths;
 use Maatwebsite\Excel\Concerns\WithDefaultStyles;
@@ -72,6 +73,8 @@ class FootCountExport implements FromCollection, WithHeadings, WithStyles, WithT
                 'TOTAL FEMALE',
                 'GRAND TOTAL',
                 'SURVEYOR',
+                'CREATED AT',
+                'SYNC AT',
             ]
         ];
     }
@@ -105,13 +108,15 @@ class FootCountExport implements FromCollection, WithHeadings, WithStyles, WithT
             $totalFemale,
             $grandTotal,
             $surveyorName,
+            Carbon::parse($foot_count->created_at)->format('M d, Y h:i A'),
+            Carbon::parse($foot_count->sync_at)->format('M d, Y h:i A'),
         ];
     }
 
 
     public function styles(Worksheet $sheet)
     {
-        $sheet->mergeCells('A1:L2');
+        $sheet->mergeCells('A1:N2');
 
         $sheet->getStyle('A1:L2')->applyFromArray([
             'alignment' => [
@@ -129,7 +134,7 @@ class FootCountExport implements FromCollection, WithHeadings, WithStyles, WithT
             ],
         ]);
 
-        $sheet->getStyle('A3:L3')->applyFromArray([
+        $sheet->getStyle('A3:N3')->applyFromArray([
             'alignment' => [
                 'horizontal' => Alignment::HORIZONTAL_CENTER,
                 'vertical'   => Alignment::VERTICAL_CENTER,
@@ -138,7 +143,7 @@ class FootCountExport implements FromCollection, WithHeadings, WithStyles, WithT
 
         $styles = [];
 
-        foreach (range("A", "L") as $column) {
+        foreach (range("A", "N") as $column) {
             $styles["{$column}3"] = [
                 'fill' => [
                     'fillType' => Fill::FILL_SOLID,
@@ -161,7 +166,7 @@ class FootCountExport implements FromCollection, WithHeadings, WithStyles, WithT
 
         // Apply styles dynamically from row 4 to the last row
         for ($row = 4; $row <= $highestRow; $row++) {
-            foreach (range("A", "L") as $column) {
+            foreach (range("A", "N") as $column) {
 
                 // Determine background color: grey for even rows, white for odd rows
                 $fillColor = ($row % 2 === 0) ? 'F2F2F2' : 'FFFFFF';
@@ -218,6 +223,8 @@ class FootCountExport implements FromCollection, WithHeadings, WithStyles, WithT
             'J' => 15,
             'K' => 20,
             'L' => 25,
+            'M' => 25,
+            'N' => 25,
         ];
     }
 }

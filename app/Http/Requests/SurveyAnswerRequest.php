@@ -65,6 +65,9 @@ class SurveyAnswerRequest extends FormRequest
                 "required",
                 "array",
             ],
+            "created_at" => [
+                "required",
+            ],
         ];
     }
 }

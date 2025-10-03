@@ -25,6 +25,7 @@ class TargetLocation extends Model
         'barangay_psgc_id',
         'barangay',
         'street',
+        'mobile_locations',
         'bound_box',
         'response_limit',
         'form_id',
@@ -49,6 +50,7 @@ class TargetLocation extends Model
 
     protected $casts = [
         'bound_box' => 'json',
+        'mobile_locations' => 'json',
         'region_psgc_id' => 'string',
         'province_psgc_id' => 'string',
         'city_municipality_psgc_id' => 'string',

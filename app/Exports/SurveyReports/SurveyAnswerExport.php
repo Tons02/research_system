@@ -3,6 +3,7 @@
 namespace App\Exports\SurveyReports;
 
 use App\Models\QuestionAnswer;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithEvents;
@@ -155,8 +156,8 @@ class SurveyAnswerExport implements FromCollection, WithHeadings, WithTitle, Wit
                 $sheet->setCellValue('D1', 'Section');
                 $sheet->setCellValue('E1', 'Question');
                 $sheet->setCellValue('F1', 'Answer');
-                $sheet->setCellValue('G1', 'Surveyor ID'); // ✅
-                $sheet->setCellValue('H1', 'Surveyor');    // ✅
+                $sheet->setCellValue('G1', 'Surveyor ID');
+                $sheet->setCellValue('H1', 'Surveyor');
 
                 // Style headers
                 $sheet->getStyle("A1:H1")->applyFromArray([
@@ -189,22 +190,7 @@ class SurveyAnswerExport implements FromCollection, WithHeadings, WithTitle, Wit
 
                     $bgColor = $colors[$currentColorIndex];
 
-                    // Mask the name
                     $name = $respondent['name'];
-                    $maskedName = implode(' ', array_map(function ($word) {
-                        $letters = mb_str_split($word);
-                        $obfuscated = '';
-                        foreach ($letters as $i => $char) {
-                            if ($i == 0) {
-                                $obfuscated .= strtoupper($char);
-                            } elseif ($i == 2 && strtolower($char) === 'a') {
-                                $obfuscated .= '@';
-                            } else {
-                                $obfuscated .= '*';
-                            }
-                        }
-                        return $obfuscated;
-                    }, explode(' ', $name)));
 
                     // Loop through sections and questions
                     foreach ($respondent['sections'] as $section) {
@@ -214,13 +200,14 @@ class SurveyAnswerExport implements FromCollection, WithHeadings, WithTitle, Wit
 
                             // Obfuscate Name answer
                             if (strtolower(trim($question)) === 'name') {
-                                $answer = $maskedName;
+                                $answer = $name;
                             }
 
                             // Set each row
-                            $sheet->setCellValue("A{$row}", $maskedName);
+                            $sheet->setCellValue("A{$row}", $name);
                             $sheet->setCellValue("B{$row}", $surveyId);
-                            $sheet->setCellValue("C{$row}", $respondent['date']);
+
+                            $sheet->setCellValue("C{$row}", Carbon::parse($respondent['date'])->format('M d, Y h:i A'));
                             $sheet->setCellValue("D{$row}", $section['section']);
                             $sheet->setCellValue("E{$row}", $question);
 
@@ -252,8 +239,8 @@ class SurveyAnswerExport implements FromCollection, WithHeadings, WithTitle, Wit
 
                 // Set column widths
                 $sheet->getColumnDimension('A')->setWidth(25);
-                $sheet->getColumnDimension('B')->setWidth(12);
-                $sheet->getColumnDimension('C')->setWidth(20);
+                $sheet->getColumnDimension('B')->setWidth(10);
+                $sheet->getColumnDimension('C')->setWidth(25);
                 $sheet->getColumnDimension('D')->setWidth(20);
                 $sheet->getColumnDimension('E')->setWidth(110);
                 $sheet->getColumnDimension('F')->setWidth(40);

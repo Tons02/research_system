@@ -26,8 +26,9 @@ class SurveyAnswerResource extends JsonResource
                     $this->target_location->sub_municipality ?? null,
                     $this->target_location->barangay ?? null,
                 ])),
+                'is_done' => $this->target_location->is_done,
             ],
-            'name' => $this->maskName($this->name),
+            'name' => $this->name,
             'age' => $this->age,
             'gender' => $this->gender,
             'address' => $this->address,
@@ -46,27 +47,13 @@ class SurveyAnswerResource extends JsonResource
             'house_rent' => $this->house_rent,
             'questionnaire_answer' => $this->questionnaire_answer,
             'surveyor' => [
-                'id' => $this->user->id,
-                'name' => $this->user->first_name . ' ' . $this->user->middle_name . ' ' . $this->user->last_name,
+                'id' => $this->surveyor->id,
+                'name' => $this->surveyor->first_name . ' ' . $this->surveyor->middle_name . ' ' . $this->surveyor->last_name,
             ],
-            'submit_date' => $this->submit_date,
+            'sync_at' => $this->sync_at,
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
             'deleted_at' => $this->deleted_at
         ];
-    }
-
-    private function maskName($fullName)
-    {
-        $parts = explode(' ', $fullName);
-        $masked = [];
-
-        foreach ($parts as $part) {
-            if (strlen($part) > 0) {
-                $masked[] = substr($part, 0, 1) . str_repeat('*', strlen($part) - 1);
-            }
-        }
-
-        return implode(' ', $masked);
     }
 }

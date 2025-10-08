@@ -35,4 +35,13 @@ class FootCountFilter extends QueryFilters
         }
         return $this;
     }
+
+    public function date($date)
+    {
+        if (!empty($date)) {
+            $this->builder->whereDate('date', $date);
+        }
+
+        return $this;
+    }
 }

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Exports\TrafficCounts\TrafficCountExport;
 use App\Exports\VehicleCountExport;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\MultipleSyncVehicleCountRequest;
 use App\Http\Requests\VehicleCountExportRequest;
 use App\Http\Requests\VehicleCountRequest;
 use App\Http\Resources\VehicleCountResource;
@@ -23,7 +24,6 @@ class VehicleCountController extends Controller
     public function index(Request $request)
     {
         $status = $request->query('status');
-        $target_location_id = $request->query('target_location_id');
         $pagination = $request->query('pagination');
 
         $VehicleCount = VehicleCount::when($status === "inactive", function ($query) {
@@ -131,6 +131,181 @@ class VehicleCountController extends Controller
         ]);
 
         return $this->responseSuccess('Vehicle Count successfully updated', $vehicle_count);
+    }
+
+    public function multiple_sync(MultipleSyncVehicleCountRequest $request)
+    {
+        $user = auth('sanctum')->user();
+        $todayDate = Carbon::now()->format('Y-m-d H:i:s');
+        $syncTime = Carbon::now();
+
+        $vehicleCounts = $request->input('vehicle_counts');
+
+        // Get all unique target location IDs
+        $targetLocationIds = array_unique(array_column($vehicleCounts, 'target_location_id'));
+
+        // Fetch all target locations at once
+        $targetLocations = TargetLocation::whereIn('id', $targetLocationIds)->get()->keyBy('id');
+
+        // Validate all target locations first
+        $validationErrors = [];
+
+        foreach ($vehicleCounts as $index => $countData) {
+            $targetLocationId = $countData['target_location_id'];
+            $targetLocation = $targetLocations->get($targetLocationId);
+
+            if (!$targetLocation) {
+                $validationErrors[] = [
+                    'status' => 422,
+                    'title' => 'Validation Error',
+                    'detail' => 'Target location not found.',
+                    'source' => [
+                        'pointer' => "/vehicle_counts/{$index}"
+                    ]
+                ];
+                continue;
+            }
+
+            // Finalization check
+            if (!$targetLocation->is_final) {
+                $validationErrors[] = [
+                    'status' => 422,
+                    'title' => 'Validation Error',
+                    'detail' => 'Cannot insert vehicle counts: target location is not finalized. Please contact your supervisor or support.',
+                    'source' => [
+                        'pointer' => "/vehicle_counts/{$index}"
+                    ]
+                ];
+                continue;
+            }
+
+            // Done checker
+            if ($targetLocation->is_done == 1) {
+                $validationErrors[] = [
+                    'status' => 422,
+                    'title' => 'Validation Error',
+                    'detail' => 'Cannot insert vehicle counts: target location is already marked as done.',
+                    'source' => [
+                        'pointer' => "/vehicle_counts/{$index}"
+                    ]
+                ];
+                continue;
+            }
+
+            // Date checker
+            if ($targetLocation->start_date > $todayDate) {
+                $validationErrors[] = [
+                    'status' => 422,
+                    'title' => 'Validation Error',
+                    'detail' => 'Cannot insert vehicle counts: target location has not started yet.',
+                    'source' => [
+                        'pointer' => "/vehicle_counts/{$index}"
+                    ]
+                ];
+                continue;
+            }
+
+            // Check for existing duplicate in database
+            $exists = VehicleCount::where('target_location_id', $targetLocationId)
+                ->where('date', $countData['date'])
+                ->where('time_range', $countData['time_range'])
+                ->where('time_period', $countData['time_period'])
+                ->exists();
+
+            if ($exists) {
+                $validationErrors[] = [
+                    'status' => 422,
+                    'title' => 'Validation Error',
+                    'detail' => 'This vehicle count entry already exists for the given date, time range, and location.',
+                    'source' => [
+                        'pointer' => "/vehicle_counts/{$index}"
+                    ]
+                ];
+            }
+        }
+
+        // If there are any validation errors, return them all at once
+        if (!empty($validationErrors)) {
+            return response()->json([
+                'errors' => $validationErrors
+            ], 422);
+        }
+
+        // All validations passed, proceed with bulk insert
+        $createdRecords = [];
+
+        DB::beginTransaction();
+
+        try {
+            foreach ($vehicleCounts as $countData) {
+                $totalLeft = $countData['total_left_private_car'] +
+                    $countData['total_left_truck'] +
+                    $countData['total_left_jeepney'] +
+                    $countData['total_left_bus'] +
+                    $countData['total_left_tricycle'] +
+                    $countData['total_left_bicycle'] +
+                    $countData['total_left_e_bike'];
+
+                $totalRight = $countData['total_right_private_car'] +
+                    $countData['total_right_truck'] +
+                    $countData['total_right_jeepney'] +
+                    $countData['total_right_bus'] +
+                    $countData['total_right_tricycle'] +
+                    $countData['total_right_bicycle'] +
+                    $countData['total_right_e_bike'];
+
+                $createdRecord = VehicleCount::create([
+                    'target_location_id' => $countData['target_location_id'],
+                    'date' => $countData['date'],
+                    'time_range' => $countData['time_range'],
+                    'time_period' => $countData['time_period'],
+                    'total_left_private_car' => $countData['total_left_private_car'],
+                    'total_left_truck' => $countData['total_left_truck'],
+                    'total_left_jeepney' => $countData['total_left_jeepney'],
+                    'total_left_bus' => $countData['total_left_bus'],
+                    'total_left_tricycle' => $countData['total_left_tricycle'],
+                    'total_left_bicycle' => $countData['total_left_bicycle'],
+                    'total_left_e_bike' => $countData['total_left_e_bike'],
+                    'total_left' => $totalLeft,
+                    'total_right_private_car' => $countData['total_right_private_car'],
+                    'total_right_truck' => $countData['total_right_truck'],
+                    'total_right_jeepney' => $countData['total_right_jeepney'],
+                    'total_right_bus' => $countData['total_right_bus'],
+                    'total_right_tricycle' => $countData['total_right_tricycle'],
+                    'total_right_bicycle' => $countData['total_right_bicycle'],
+                    'total_right_e_bike' => $countData['total_right_e_bike'],
+                    'total_right' => $totalRight,
+                    'grand_total' => $totalLeft + $totalRight,
+                    'surveyor_id' => $user->id,
+                    'sync_at' => $syncTime,
+                    'created_at' => $countData['created_at'],
+                ]);
+
+                $createdRecords[] = $createdRecord;
+            }
+
+            DB::commit();
+
+            return $this->responseCreated(
+                'Vehicle Counts Successfully Synced',
+                [
+                    'total_synced' => count($createdRecords),
+                    'records' => $createdRecords
+                ]
+            );
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            return response()->json([
+                'errors' => [
+                    [
+                        'status' => 500,
+                        'title' => 'Server Error',
+                        'detail' => 'Failed to sync vehicle counts: ' . $e->getMessage()
+                    ]
+                ]
+            ], 500);
+        }
     }
 
 

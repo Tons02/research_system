@@ -96,8 +96,10 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::patch('resetpassword/{id}', [AuthController::class, 'resetPassword'])->middleware(['abilities:masterlist:user-accounts:crud']);
 
     //Survey Answer Controller
+    Route::post('survey-answers-multiple-sync', [SurveyAnswerController::class, 'multiple_sync']);
     Route::put('survey-answer-archived/{id}', [SurveyAnswerController::class, 'archived']);
     Route::resource("survey-answers", SurveyAnswerController::class);
+    Route::get('survey-mobile-answer', [SurveyAnswerController::class, 'mobile_survey']);
     Route::get('survey-answer-export', [SurveyAnswerController::class, 'export']);
 
     //Question Answers Controller
@@ -105,11 +107,13 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     // make the api public
     //Vehicle Count Controller
+    Route::post('vehicle-counts-multiple-sync', [VehicleCountController::class, 'multiple_sync']);
     Route::put('vehicle-count-archived/{id}', [VehicleCountController::class, 'archived']);
     Route::get('vehicle-count-export', [VehicleCountController::class, 'export']);
     Route::resource("vehicle-counts", VehicleCountController::class);
 
     //Foot Count Controller
+    Route::post('foot-counts-multiple-sync', [FootCountController::class, 'multiple_sync']);
     Route::put('foot-count-archived/{id}', [FootCountController::class, 'archived']);
     Route::get('foot-count-export', [FootCountController::class, 'export']);
     Route::resource("foot-counts", FootCountController::class);

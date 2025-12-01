@@ -28,23 +28,10 @@ class SurveyAnswerController extends Controller
     {
         $status = $request->query('status');
         $pagination = $request->query('pagination');
-        $from_date = $request->query('from_date');
-        $to_date = $request->query('to_date');
-
-        if ($from_date) {
-            $from_date = Carbon::parse($from_date)->startOfDay();
-        }
-
-        if ($to_date) {
-            $to_date = Carbon::parse($to_date)->endOfDay();
-        }
 
         $SurveyAnswer = SurveyAnswer::when($status === "inactive", function ($query) {
             $query->onlyTrashed();
         })
-            ->when($from_date != null && $to_date != null, function ($query) use ($from_date, $to_date) {
-                return $query->whereBetween('date', [$from_date, $to_date]);
-            })
             // ->orderBy('created_at', 'desc') wag mo kalimutan i uncomment to
             ->useFilters()
             ->dynamicPaginate();
@@ -506,53 +493,28 @@ class SurveyAnswerController extends Controller
     {
         $target_location_id = $request->query('target_location_id');
         $surveyor_id = $request->query('surveyor_id');
-        $from_date = $request->query('from_date')
-            ? Carbon::parse($request->query('from_date'))->startOfDay()
-            : Carbon::createFromFormat('m-d-Y', '03-01-2025')->startOfDay();
-
-        $to_date = $request->query('to_date')
-            ? Carbon::parse($request->query('to_date'))->endOfDay()
-            : Carbon::createFromFormat('m-d-Y', '03-01-2050')->startOfDay();
+        // Parse and normalize dates
+        $start_date = $request->query('start_date');
+        $end_date = $request->query('end_date');
         $status = $request->query('status');
 
-        $location_name = TargetLocation::find($target_location_id);
-
-        if (!$location_name) {
-            return $this->responseUnprocessable('', 'Invalid ID provided. Please check the ID and try again.');
-        }
-
-        $target_location = trim(implode(', ', array_filter([
-            $location_name->province ?? null,
-            $location_name->city_municipality ?? null,
-            $location_name->sub_municipality ?? null,
-            $location_name->barangay ?? null
-        ])));
-
-
-        $survey_count = SurveyAnswer::where('target_location_id', $target_location_id)
-            ->when($surveyor_id, function ($query) use ($surveyor_id) {
-                $query->where('surveyor_id', $surveyor_id);
-            })
-            ->when($from_date && $to_date, function ($query) use ($from_date, $to_date) {
-                $query->whereBetween('created_at', [$from_date, $to_date]);
-            })
-            ->get()->count();
-
-        if ($survey_count <= 0) {
-            return $this->responseUnprocessable('', 'No Available Reports.');
-        }
-
-        // return DB::table('survey_answers')
-        //     ->select('educational_attainment', 'income_class')
-        //     ->where('target_location_id', $target_location_id)
+        // return $totalClassC = SurveyAnswer::where('target_location_id', $target_location_id)
+        //     ->where('income_class', 'Class AB')
         //     ->when($surveyor_id, function ($query) use ($surveyor_id) {
         //         $query->where('surveyor_id', $surveyor_id);
         //     })
-        //     ->when($from_date && $to_date, function ($query) use ($from_date, $to_date) {
-        //         $query->whereBetween('created_at', [$from_date, $to_date]);
+        //     ->when($start_date && $end_date, function ($query) use ($start_date, $end_date) {
+        //         $query->whereDate('date', '>=', $start_date)
+        //             ->whereDate('date', '<=', $end_date);
         //     })
-        //     ->get();
+        //     ->when($start_date && !$end_date, function ($query) use ($start_date) {
+        //         $query->whereDate('date', '>=', $start_date);
+        //     })
+        //     ->when(!$start_date && $end_date, function ($query) use ($end_date) {
+        //         $query->whereDate('date', '<=', $end_date);
+        //     })
+        //     ->count();
 
-        return Excel::download(new OverAllReport($target_location_id, $surveyor_id, $from_date, $to_date, $status),  ' Survey Answers.xlsx');
+        return Excel::download(new OverAllReport($target_location_id, $surveyor_id, $start_date, $end_date, $status),  ' Survey Answers.xlsx');
     }
 }

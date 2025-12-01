@@ -2,6 +2,7 @@
 
 namespace App\Filters;
 
+use Carbon\Carbon;
 use Essa\APIToolKit\Filters\QueryFilters;
 
 class VehicleCountFilter extends QueryFilters
@@ -38,10 +39,27 @@ class VehicleCountFilter extends QueryFilters
         return $this;
     }
 
-    public function date($date)
+    public function start_date($start_date)
     {
-        if (!empty($date)) {
-            $this->builder->whereDate('date', $date);
+        if ($start_date !== null) {
+
+            // Ensure accurate date parsing
+            $start_date = Carbon::parse($start_date)->startOfDay();
+
+            $this->builder->whereDate('date', '>=', $start_date);
+        }
+
+        return $this;
+    }
+
+    public function end_date($end_date)
+    {
+        if ($end_date !== null) {
+
+            // Ensure accurate date parsing
+            $end_date = Carbon::parse($end_date)->startOfDay();
+
+            $this->builder->whereDate('date', '<=', $end_date);
         }
 
         return $this;

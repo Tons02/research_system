@@ -189,6 +189,152 @@ class TargetLocationController extends Controller
     }
 
 
+    public function update_locations(TargetLocationRequest $request, $id)
+    {
+        DB::beginTransaction();
+
+        try {
+            $target_location = TargetLocation::find($id);
+
+            if (!$target_location) {
+                DB::rollBack();
+                return $this->responseUnprocessable(
+                    '',
+                    'The requested target location could not be found. Please verify the ID and try again.'
+                );
+            }
+
+            // Validate if the location can be updated
+            if ($target_location->is_done === true) {
+                DB::rollBack();
+                return $this->responseUnprocessable(
+                    '',
+                    'This target location has been finalized and cannot be modified. Please contact your administrator if changes are required.'
+                );
+            }
+
+            $mobile_locations = $request->input('mobile_locations', []);
+
+            // Validate that mobile_locations is not empty
+            if (empty($mobile_locations)) {
+                DB::rollBack();
+                return $this->responseUnprocessable(
+                    '',
+                    'Mobile locations cannot be empty. The base location must be included.'
+                );
+            }
+
+            // Validate that the first element matches the base target location
+            $first_location = $mobile_locations[0];
+
+            $is_valid_base_location = $this->validateBaseLocation($first_location, $target_location);
+
+            if (!$is_valid_base_location) {
+                DB::rollBack();
+                return $this->responseUnprocessable(
+                    '',
+                    'The first mobile location must match the base target location. Please ensure the base location is at the beginning of the array.'
+                );
+            }
+
+            // Update mobile locations
+            $target_location->mobile_locations = $mobile_locations;
+
+            // Only save if there are actual changes
+            if ($target_location->isDirty()) {
+                $target_location->save();
+                DB::commit();
+
+                return $this->responseSuccess(
+                    'Mobile locations have been successfully updated. Please notify the researcher to synchronize the latest locations.',
+                    $target_location
+                );
+            }
+
+            DB::commit();
+            return $this->responseSuccess(
+                'No changes detected. Mobile locations are already up to date.',
+                $target_location
+            );
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            return $this->responseServerError(
+                'An unexpected error occurred while updating mobile locations. Please try again or contact support if the issue persists.'
+            );
+        }
+    }
+
+    /**
+     * Validate that the first mobile location matches the base target location
+     */
+    private function validateBaseLocation($first_location, $target_location)
+    {
+        // Check if first_location has the required structure
+        if (
+            !isset($first_location['region_psgc_id']) ||
+            !isset($first_location['city_municipalities']) ||
+            !is_array($first_location['city_municipalities']) ||
+            empty($first_location['city_municipalities'])
+        ) {
+            return false;
+        }
+
+        $first_city = $first_location['city_municipalities'][0];
+
+        // Validate region
+        if ($first_location['region_psgc_id'] !== $target_location->region_psgc_id) {
+            return false;
+        }
+
+        // Validate province (can be null)
+        if (($first_location['province_psgc_id'] ?? null) !== $target_location->province_psgc_id) {
+            return false;
+        }
+
+        // Validate city/municipality
+        if (($first_city['city_municipality_psgc_id'] ?? null) !== $target_location->city_municipality_psgc_id) {
+            return false;
+        }
+
+        // Validate sub_municipality if it exists in target location
+        if ($target_location->sub_municipality_psgc_id) {
+            $has_matching_sub_municipality = false;
+
+            foreach ($first_city['sub_municipalities'] ?? [] as $sub_muni) {
+                if (($sub_muni['sub_municipalities_psgc_id'] ?? null) === $target_location->sub_municipality_psgc_id) {
+                    // Check if the base barangay exists in this sub_municipality
+                    foreach ($sub_muni['barangays'] ?? [] as $barangay) {
+                        if (($barangay['barangay_psgc_id'] ?? null) === $target_location->barangay_psgc_id) {
+                            $has_matching_sub_municipality = true;
+                            break 2;
+                        }
+                    }
+                }
+            }
+
+            if (!$has_matching_sub_municipality) {
+                return false;
+            }
+        } else {
+            // If no sub_municipality, check barangays directly under city
+            $has_matching_barangay = false;
+
+            foreach ($first_city['barangays'] ?? [] as $barangay) {
+                if (($barangay['barangay_psgc_id'] ?? null) === $target_location->barangay_psgc_id) {
+                    $has_matching_barangay = true;
+                    break;
+                }
+            }
+
+            if (!$has_matching_barangay) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
 
     public function archived(Request $request, $id)
     {
@@ -368,7 +514,6 @@ class TargetLocationController extends Controller
             return $this->responseServerError('Network Error Please Try Again');
         }
     }
-
 
     protected function getBoundBox($location)
     {

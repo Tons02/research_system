@@ -3,6 +3,7 @@
 namespace App\Exports\TrafficCounts;
 
 use App\Models\FootCount;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithCharts;
@@ -29,22 +30,33 @@ use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
 class FootCountAverageExport implements FromCollection, WithHeadings, WithStyles, WithTitle, WithMapping, WithDefaultStyles, WithColumnWidths, WithColumnFormatting, WithEvents, WithCharts
 {
-    protected $target_location_id, $footCounts, $surveyor_id;
+    protected $target_location_id, $footCounts, $surveyor_id, $start_date, $end_date;
     protected ?Chart $chart = null;
 
     private const SHEET_TITLE = 'Foot Count Average';
 
-    public function __construct($target_location_id, $surveyor_id)
+    public function __construct($target_location_id, $surveyor_id, $start_date = null, $end_date = null)
     {
         $this->target_location_id = $target_location_id;
         $this->surveyor_id = $surveyor_id;
+        $this->start_date = $start_date;
+        $this->end_date = $end_date;
 
         // Fetch foot counts and filter by location using whereHas
         $data = DB::table('foot_counts')
             ->join('target_locations', 'foot_counts.target_location_id', '=', 'target_locations.id')
             ->where('foot_counts.target_location_id', $this->target_location_id)
+            ->whereNull('foot_counts.deleted_at')
             ->when($this->surveyor_id !== null, function ($query) {
                 $query->where('foot_counts.surveyor_id', $this->surveyor_id);
+            })->when($this->start_date && $this->end_date, function ($query) {
+                $query->whereBetween('foot_counts.date', [$this->start_date, $this->end_date]);
+            })
+            ->when($this->start_date && !$this->end_date, function ($query) {
+                $query->whereDate('foot_counts.date', '>=', $this->start_date);
+            })
+            ->when(!$this->start_date && $this->end_date, function ($query) {
+                $query->whereDate('foot_counts.date', '<=', $this->end_date);
             })
             ->orderBy('date', 'asc')
             ->get();
@@ -201,6 +213,61 @@ class FootCountAverageExport implements FromCollection, WithHeadings, WithStyles
                     ]);
                 }
 
+                // Build dynamic date range text
+                $start = $this->start_date ? Carbon::parse($this->start_date)->format('F d, Y') : null;
+                $end   = $this->end_date   ? Carbon::parse($this->end_date)->format('F d, Y') : null;
+
+                if ($start && $end) {
+                    $rangeText = "DATE FILTER: {$start} to {$end}";
+                } elseif ($start && !$end) {
+                    $rangeText = "DATE FILTER: From {$start}";
+                } elseif (!$start && $end) {
+                    $rangeText = "DATE FILTER: Up to {$end}";
+                } else {
+                    $rangeText = "DATE FILTER: ALL DATES";
+                }
+
+                // ===== Add Date Range Label Above Chart =====
+                // Make sure text is created before chart OR after chart to make visible
+                $cell = 'F1:I2';
+
+                $sheet->mergeCells($cell);
+
+                $sheet->setCellValueExplicit(
+                    'F1',
+                    $rangeText,
+                    \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING
+                );
+
+                $sheet->getStyle($cell)->applyFromArray([
+                    'fill' => [
+                        'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
+                        'color' => ['rgb' => 'FFC000']
+                    ],
+                    'font' => [
+                        'bold' => true,
+                        'color' => ['rgb' => '000000'],
+                        'name' => 'Century Gothic',
+                        'size' => 11,
+                    ],
+                    'alignment' => [
+                        'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
+                        'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER,
+                        'wrapText' => true,
+                    ],
+                    'borders' => [
+                        'allBorders' => [
+                            'borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN,
+                            'color' => ['rgb' => '000000']
+                        ]
+                    ]
+                ]);
+
+                // ensure columns are visible
+                foreach (['F', 'G', 'H', 'I'] as $col) {
+                    $sheet->getColumnDimension($col)->setWidth(15);
+                }
+
                 // ===== CREATE HORIZONTAL BAR CHART =====
                 if (!empty($this->footCounts)) {
                     $dataCount = count($this->footCounts);
@@ -278,8 +345,8 @@ class FootCountAverageExport implements FromCollection, WithHeadings, WithStyles
                     );
 
                     // Position the chart to the right of the table
-                    $chart->setTopLeftPosition('G3');
-                    $chart->setBottomRightPosition('P20');
+                    $chart->setTopLeftPosition('G4');
+                    $chart->setBottomRightPosition('P21');
 
                     // Keep reference for WithCharts
                     $this->chart = $chart;

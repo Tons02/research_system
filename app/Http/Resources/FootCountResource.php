@@ -32,6 +32,7 @@ class FootCountResource extends JsonResource
             ],
             'target_locations' => [
                 'id' => $this->target_locations->first()?->id,
+                'title' => $this->target_locations->title,
                 'target_locations' => implode(', ', array_filter([
                     $this->target_locations->first()?->region ?? null,
                     $this->target_locations->first()?->province ?? null,
@@ -44,5 +45,5 @@ class FootCountResource extends JsonResource
             'sync_at' => $this->sync_at,
             'created_at' => $this->created_at
         ];
-    } 
+    }
 }

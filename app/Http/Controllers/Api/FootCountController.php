@@ -284,9 +284,26 @@ class FootCountController extends Controller
 
     public function export(VehicleCountExportRequest $request)
     {
-        $target_location_id = $request->query('target_location_id', null);
-        $surveyor_id = $request->query('surveyor_id', null);
+        $target_location_id = $request->query('target_location_id');
+        $surveyor_id = $request->query('surveyor_id');
 
-        return Excel::download(new TrafficFootCountExport($target_location_id, $surveyor_id), 'Foot Counts.xlsx');
+        // ==== SAFE & CLEAN DATE PARSING HERE ====
+        $start_date = $request->query('start_date')
+            ? Carbon::parse($request->query('start_date'))->startOfDay()
+            : null;
+
+        $end_date = $request->query('end_date')
+            ? Carbon::parse($request->query('end_date'))->endOfDay()
+            : null;
+
+        return Excel::download(
+            new TrafficFootCountExport(
+                $target_location_id,
+                $surveyor_id,
+                $start_date,
+                $end_date
+            ),
+            'Foot Counts.xlsx'
+        );
     }
 }

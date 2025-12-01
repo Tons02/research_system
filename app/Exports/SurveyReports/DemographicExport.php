@@ -3,6 +3,7 @@
 namespace App\Exports\SurveyReports;
 
 use App\Models\SurveyAnswer;
+use Carbon\Carbon;
 use Essa\APIToolKit\Api\ApiResponse;
 use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Concerns\FromCollection;
@@ -25,39 +26,16 @@ class DemographicExport implements FromCollection, WithTitle, WithHeadings, With
 {
     use ApiResponse;
 
-    protected $target_location_id, $sub_income_class_data, $income_class, $class_counts, $education_data, $employment, $occupation_of_employed, $surveyor_id, $from_date, $to_date, $status;
+    protected $target_location_id, $sub_income_class_data, $income_class, $class_counts, $education_data, $employment, $occupation_of_employed, $surveyor_id, $start_date, $end_date, $status;
 
-    public function __construct($target_location_id, $surveyor_id, $from_date, $to_date, $status)
+    public function __construct($target_location_id, $surveyor_id, $start_date, $end_date, $status)
     {
 
         $this->target_location_id = $target_location_id;
         $this->surveyor_id = $surveyor_id;
-        $this->from_date = $from_date;
-        $this->to_date = $to_date;
+        $this->start_date = $start_date;
+        $this->end_date = $end_date;
         $this->status = $status;
-
-        // Total count for 'Class C'
-        // $totalClassC = SurveyAnswer::where('target_location_id', $target_location_id)
-        //     ->where('income_class', 'Class C')
-        //     ->when($this->surveyor_id, function ($query) {
-        //         $query->where('surveyor_id', $this->surveyor_id);
-        //     })
-        //     ->when($this->from_date && $this->to_date, function ($query) {
-        //         $query->whereBetween('date', [$this->from_date, $this->to_date]);
-        //     })
-        //     ->count();
-
-        // // If totalClassC is 0, return early with empty TOTAL
-        // if ($totalClassC === 0) {
-        //     $this->sub_income_class_data = collect([
-        //         (object)[
-        //             'sub_income_class' => 'TOTAL',
-        //             'count' => 0,
-        //             'percentage' => 0,
-        //         ]
-        //     ]);
-        //     // return;
-        // }
 
         // Total count for 'Class C'
         $totalClassC = SurveyAnswer::where('target_location_id', $target_location_id)
@@ -65,10 +43,18 @@ class DemographicExport implements FromCollection, WithTitle, WithHeadings, With
             ->when($this->surveyor_id, function ($query) {
                 $query->where('surveyor_id', $this->surveyor_id);
             })
-            ->when($this->from_date && $this->to_date, function ($query) {
-                $query->whereBetween('date', [$this->from_date, $this->to_date]);
+            ->when($this->start_date && $this->end_date, function ($query) {
+                $query->whereDate('date', '>=', $this->start_date)
+                    ->whereDate('date', '<=', $this->end_date);
+            })
+            ->when($this->start_date && !$this->end_date, function ($query) {
+                $query->whereDate('date', '>=', $this->start_date);
+            })
+            ->when(!$this->start_date && $this->end_date, function ($query) {
+                $query->whereDate('date', '<=', $this->end_date);
             })
             ->count();
+
 
         if ($totalClassC === 0) {
             $this->sub_income_class_data = collect([
@@ -89,8 +75,15 @@ class DemographicExport implements FromCollection, WithTitle, WithHeadings, With
                 ->when($this->surveyor_id, function ($query) {
                     $query->where('surveyor_id', $this->surveyor_id);
                 })
-                ->when($this->from_date && $this->to_date, function ($query) {
-                    $query->whereBetween('date', [$this->from_date, $this->to_date]);
+                ->when($this->start_date && $this->end_date, function ($query) {
+                    $query->whereDate('date', '>=', $this->start_date)
+                        ->whereDate('date', '<=', $this->end_date);
+                })
+                ->when($this->start_date && !$this->end_date, function ($query) {
+                    $query->whereDate('date', '>=', $this->start_date);
+                })
+                ->when(!$this->start_date && $this->end_date, function ($query) {
+                    $query->whereDate('date', '<=', $this->end_date);
                 })
                 ->groupBy('sub_income_class')
                 ->get();
@@ -146,8 +139,8 @@ class DemographicExport implements FromCollection, WithTitle, WithHeadings, With
                 ->when($this->surveyor_id, function ($query) {
                     $query->where('surveyor_id', $this->surveyor_id);
                 })
-                ->when($this->from_date && $this->to_date, function ($query) {
-                    $query->whereBetween('date', [$this->from_date, $this->to_date]);
+                ->when($this->start_date && $this->end_date, function ($query) {
+                    $query->whereBetween('date', [$this->start_date, $this->end_date]);
                 })
                 ->count();
         }
@@ -163,8 +156,15 @@ class DemographicExport implements FromCollection, WithTitle, WithHeadings, With
             ->when($this->surveyor_id, function ($query) {
                 $query->where('surveyor_id', $this->surveyor_id);
             })
-            ->when($this->from_date && $this->to_date, function ($query) {
-                $query->whereBetween('date', [$this->from_date, $this->to_date]);
+            ->when($this->start_date && $this->end_date, function ($query) {
+                $query->whereDate('date', '>=', $this->start_date)
+                    ->whereDate('date', '<=', $this->end_date);
+            })
+            ->when($this->start_date && !$this->end_date, function ($query) {
+                $query->whereDate('date', '>=', $this->start_date);
+            })
+            ->when(!$this->start_date && $this->end_date, function ($query) {
+                $query->whereDate('date', '<=', $this->end_date);
             })
             ->whereNotNull('income_class')
             ->distinct()
@@ -181,8 +181,15 @@ class DemographicExport implements FromCollection, WithTitle, WithHeadings, With
             ->when($surveyor_id, function ($query) use ($surveyor_id) {
                 $query->where('surveyor_id', $surveyor_id);
             })
-            ->when($from_date && $to_date, function ($query) use ($from_date, $to_date) {
-                $query->whereBetween('date', [$from_date, $to_date]);
+            ->when($this->start_date && $this->end_date, function ($query) {
+                $query->whereDate('date', '>=', $this->start_date)
+                    ->whereDate('date', '<=', $this->end_date);
+            })
+            ->when($this->start_date && !$this->end_date, function ($query) {
+                $query->whereDate('date', '>=', $this->start_date);
+            })
+            ->when(!$this->start_date && $this->end_date, function ($query) {
+                $query->whereDate('date', '<=', $this->end_date);
             })
             ->get();
 
@@ -259,8 +266,15 @@ class DemographicExport implements FromCollection, WithTitle, WithHeadings, With
             ->when($this->surveyor_id, function ($query) {
                 $query->where('surveyor_id', $this->surveyor_id);
             })
-            ->when($this->from_date && $this->to_date, function ($query) {
-                $query->whereBetween('date', [$this->from_date, $this->to_date]);
+            ->when($this->start_date && $this->end_date, function ($query) {
+                $query->whereDate('date', '>=', $this->start_date)
+                    ->whereDate('date', '<=', $this->end_date);
+            })
+            ->when($this->start_date && !$this->end_date, function ($query) {
+                $query->whereDate('date', '>=', $this->start_date);
+            })
+            ->when(!$this->start_date && $this->end_date, function ($query) {
+                $query->whereDate('date', '<=', $this->end_date);
             })
             ->count();
         $classCTotal = SurveyAnswer::where('income_class', 'Class C')
@@ -268,8 +282,15 @@ class DemographicExport implements FromCollection, WithTitle, WithHeadings, With
             ->when($this->surveyor_id, function ($query) {
                 $query->where('surveyor_id', $this->surveyor_id);
             })
-            ->when($this->from_date && $this->to_date, function ($query) {
-                $query->whereBetween('date', [$this->from_date, $this->to_date]);
+            ->when($this->start_date && $this->end_date, function ($query) {
+                $query->whereDate('date', '>=', $this->start_date)
+                    ->whereDate('date', '<=', $this->end_date);
+            })
+            ->when($this->start_date && !$this->end_date, function ($query) {
+                $query->whereDate('date', '>=', $this->start_date);
+            })
+            ->when(!$this->start_date && $this->end_date, function ($query) {
+                $query->whereDate('date', '<=', $this->end_date);
             })
             ->count();
         $classDETotal = SurveyAnswer::where('income_class', 'Class DE')
@@ -277,8 +298,15 @@ class DemographicExport implements FromCollection, WithTitle, WithHeadings, With
             ->when($this->surveyor_id, function ($query) {
                 $query->where('surveyor_id', $this->surveyor_id);
             })
-            ->when($this->from_date && $this->to_date, function ($query) {
-                $query->whereBetween('date', [$this->from_date, $this->to_date]);
+            ->when($this->start_date && $this->end_date, function ($query) {
+                $query->whereDate('date', '>=', $this->start_date)
+                    ->whereDate('date', '<=', $this->end_date);
+            })
+            ->when($this->start_date && !$this->end_date, function ($query) {
+                $query->whereDate('date', '>=', $this->start_date);
+            })
+            ->when(!$this->start_date && $this->end_date, function ($query) {
+                $query->whereDate('date', '<=', $this->end_date);
             })
             ->count();
 
@@ -286,8 +314,15 @@ class DemographicExport implements FromCollection, WithTitle, WithHeadings, With
             ->when($this->surveyor_id, function ($query) {
                 $query->where('surveyor_id', $this->surveyor_id);
             })
-            ->when($this->from_date && $this->to_date, function ($query) {
-                $query->whereBetween('date', [$this->from_date, $this->to_date]);
+            ->when($this->start_date && $this->end_date, function ($query) {
+                $query->whereDate('date', '>=', $this->start_date)
+                    ->whereDate('date', '<=', $this->end_date);
+            })
+            ->when($this->start_date && !$this->end_date, function ($query) {
+                $query->whereDate('date', '>=', $this->start_date);
+            })
+            ->when(!$this->start_date && $this->end_date, function ($query) {
+                $query->whereDate('date', '<=', $this->end_date);
             })
             ->count();
 
@@ -302,8 +337,15 @@ class DemographicExport implements FromCollection, WithTitle, WithHeadings, With
                 ->when($this->surveyor_id, function ($query) {
                     $query->where('surveyor_id', $this->surveyor_id);
                 })
-                ->when($this->from_date && $this->to_date, function ($query) {
-                    $query->whereBetween('date', [$this->from_date, $this->to_date]);
+                ->when($this->start_date && $this->end_date, function ($query) {
+                    $query->whereDate('date', '>=', $this->start_date)
+                        ->whereDate('date', '<=', $this->end_date);
+                })
+                ->when($this->start_date && !$this->end_date, function ($query) {
+                    $query->whereDate('date', '>=', $this->start_date);
+                })
+                ->when(!$this->start_date && $this->end_date, function ($query) {
+                    $query->whereDate('date', '<=', $this->end_date);
                 })
                 ->count();
 
@@ -313,8 +355,15 @@ class DemographicExport implements FromCollection, WithTitle, WithHeadings, With
                 ->when($this->surveyor_id, function ($query) {
                     $query->where('surveyor_id', $this->surveyor_id);
                 })
-                ->when($this->from_date && $this->to_date, function ($query) {
-                    $query->whereBetween('date', [$this->from_date, $this->to_date]);
+                ->when($this->start_date && $this->end_date, function ($query) {
+                    $query->whereDate('date', '>=', $this->start_date)
+                        ->whereDate('date', '<=', $this->end_date);
+                })
+                ->when($this->start_date && !$this->end_date, function ($query) {
+                    $query->whereDate('date', '>=', $this->start_date);
+                })
+                ->when(!$this->start_date && $this->end_date, function ($query) {
+                    $query->whereDate('date', '<=', $this->end_date);
                 })
                 ->count();
 
@@ -324,8 +373,15 @@ class DemographicExport implements FromCollection, WithTitle, WithHeadings, With
                 ->when($this->surveyor_id, function ($query) {
                     $query->where('surveyor_id', $this->surveyor_id);
                 })
-                ->when($this->from_date && $this->to_date, function ($query) {
-                    $query->whereBetween('date', [$this->from_date, $this->to_date]);
+                ->when($this->start_date && $this->end_date, function ($query) {
+                    $query->whereDate('date', '>=', $this->start_date)
+                        ->whereDate('date', '<=', $this->end_date);
+                })
+                ->when($this->start_date && !$this->end_date, function ($query) {
+                    $query->whereDate('date', '>=', $this->start_date);
+                })
+                ->when(!$this->start_date && $this->end_date, function ($query) {
+                    $query->whereDate('date', '<=', $this->end_date);
                 })
                 ->count();
 
@@ -334,8 +390,15 @@ class DemographicExport implements FromCollection, WithTitle, WithHeadings, With
                 ->when($this->surveyor_id, function ($query) {
                     $query->where('surveyor_id', $this->surveyor_id);
                 })
-                ->when($this->from_date && $this->to_date, function ($query) {
-                    $query->whereBetween('date', [$this->from_date, $this->to_date]);
+                ->when($this->start_date && $this->end_date, function ($query) {
+                    $query->whereDate('date', '>=', $this->start_date)
+                        ->whereDate('date', '<=', $this->end_date);
+                })
+                ->when($this->start_date && !$this->end_date, function ($query) {
+                    $query->whereDate('date', '>=', $this->start_date);
+                })
+                ->when(!$this->start_date && $this->end_date, function ($query) {
+                    $query->whereDate('date', '<=', $this->end_date);
                 })
                 ->count();
 
@@ -378,10 +441,10 @@ class DemographicExport implements FromCollection, WithTitle, WithHeadings, With
             $bindings[] = $this->surveyor_id;
         }
 
-        if ($this->from_date && $this->to_date) {
+        if ($this->start_date && $this->end_date) {
             $subConditions .= " AND date BETWEEN ? AND ?";
-            $bindings[] = $this->from_date;
-            $bindings[] = $this->to_date;
+            $bindings[] = $this->start_date;
+            $bindings[] = $this->end_date;
         }
 
         $sql = "
@@ -406,10 +469,10 @@ class DemographicExport implements FromCollection, WithTitle, WithHeadings, With
             $bindings[] = $this->surveyor_id;
         }
 
-        if ($this->from_date && $this->to_date) {
+        if ($this->start_date && $this->end_date) {
             $sql .= " AND date BETWEEN ? AND ?";
-            $bindings[] = $this->from_date;
-            $bindings[] = $this->to_date;
+            $bindings[] = $this->start_date;
+            $bindings[] = $this->end_date;
         }
 
         $sql .= "
@@ -445,15 +508,38 @@ class DemographicExport implements FromCollection, WithTitle, WithHeadings, With
     {
         $target_location_id = $this->target_location_id;
 
-        $totalCount = SurveyAnswer::where('target_location_id', $target_location_id)->count();
+        // FIX: Apply the date and surveyor filters to total count
+        $totalCount = SurveyAnswer::where('target_location_id', $target_location_id)
+            ->when($this->surveyor_id, function ($query) {
+                $query->where('surveyor_id', $this->surveyor_id);
+            })
+            ->when($this->start_date && $this->end_date, function ($query) {
+                $query->whereDate('date', '>=', $this->start_date)
+                    ->whereDate('date', '<=', $this->end_date);
+            })
+            ->when($this->start_date && !$this->end_date, function ($query) {
+                $query->whereDate('date', '>=', $this->start_date);
+            })
+            ->when(!$this->start_date && $this->end_date, function ($query) {
+                $query->whereDate('date', '<=', $this->end_date);
+            })
+            ->count();
 
+        // Now percentages will be correct
         $data = SurveyAnswer::selectRaw("income_class, COUNT(*) as total, (COUNT(*) / $totalCount) * 100 as percentage")
             ->where('target_location_id', $target_location_id)
             ->when($this->surveyor_id, function ($query) {
                 $query->where('surveyor_id', $this->surveyor_id);
             })
-            ->when($this->from_date && $this->to_date, function ($query) {
-                $query->whereBetween('date', [$this->from_date, $this->to_date]);
+            ->when($this->start_date && $this->end_date, function ($query) {
+                $query->whereDate('date', '>=', $this->start_date)
+                    ->whereDate('date', '<=', $this->end_date);
+            })
+            ->when($this->start_date && !$this->end_date, function ($query) {
+                $query->whereDate('date', '>=', $this->start_date);
+            })
+            ->when(!$this->start_date && $this->end_date, function ($query) {
+                $query->whereDate('date', '<=', $this->end_date);
             })
             ->groupBy('income_class')
             ->orderBy('income_class', 'asc')
@@ -512,6 +598,61 @@ class DemographicExport implements FromCollection, WithTitle, WithHeadings, With
         return [
             AfterSheet::class => function (AfterSheet $event) {
                 $sheet = $event->sheet->getDelegate();
+
+                // Build dynamic date range text
+                $start = $this->start_date ? Carbon::parse($this->start_date)->format('F d, Y') : null;
+                $end   = $this->end_date   ? Carbon::parse($this->end_date)->format('F d, Y') : null;
+
+                if ($start && $end) {
+                    $rangeText = "DATE FILTER: {$start} to {$end}";
+                } elseif ($start && !$end) {
+                    $rangeText = "DATE FILTER: From {$start}";
+                } elseif (!$start && $end) {
+                    $rangeText = "DATE FILTER: Up to {$end}";
+                } else {
+                    $rangeText = "DATE FILTER: ALL DATES";
+                }
+
+                // ===== Add Date Range Label Above Chart =====
+                // Make sure text is created before chart OR after chart to make visible
+                $cell = 'J1:M2';
+
+                $sheet->mergeCells($cell);
+
+                $sheet->setCellValueExplicit(
+                    'J1',
+                    $rangeText,
+                    \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING
+                );
+
+                $sheet->getStyle($cell)->applyFromArray([
+                    'fill' => [
+                        'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
+                        'color' => ['rgb' => 'FFC000']
+                    ],
+                    'font' => [
+                        'bold' => true,
+                        'color' => ['rgb' => '000000'],
+                        'name' => 'Century Gothic',
+                        'size' => 11,
+                    ],
+                    'alignment' => [
+                        'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
+                        'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER,
+                        'wrapText' => true,
+                    ],
+                    'borders' => [
+                        'allBorders' => [
+                            'borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN,
+                            'color' => ['rgb' => '000000']
+                        ]
+                    ]
+                ]);
+
+                // ensure columns are visible
+                foreach (['J', 'K', 'L', 'M'] as $col) {
+                    $sheet->getColumnDimension($col)->setWidth(15);
+                }
 
                 // 🟢 First Dataset (Main Demographics)
                 $firstTableStartRow = 4; // Assuming headers start at row 4

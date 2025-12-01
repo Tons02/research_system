@@ -3,6 +3,7 @@
 namespace App\Exports\TrafficCounts;
 
 use App\Models\FootCount;
+use Carbon\Carbon;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithColumnWidths;
 use Maatwebsite\Excel\Concerns\WithDefaultStyles;
@@ -38,15 +39,19 @@ class FootCountSummaryExport implements
 {
     protected $target_location_id;
     protected $surveyor_id;
+    protected $start_date;
+    protected $end_date;
     protected $data;
     protected ?Chart $chart = null;
 
     private const SHEET_TITLE = 'Foot Count Summary';
 
-    public function __construct($target_location_id, $surveyor_id)
+    public function __construct($target_location_id, $surveyor_id, $start_date = null, $end_date = null)
     {
         $this->target_location_id = $target_location_id;
         $this->surveyor_id = $surveyor_id;
+        $this->start_date = $start_date;
+        $this->end_date = $end_date;
     }
 
     public function collection()
@@ -71,6 +76,16 @@ class FootCountSummaryExport implements
             ->when($this->surveyor_id !== null, function ($query) {
                 $query->where('foot_counts.surveyor_id', $this->surveyor_id);
             })
+            ->when($this->start_date && $this->end_date, function ($query) {
+                $query->whereBetween('foot_counts.date', [$this->start_date, $this->end_date]);
+            })
+            ->when($this->start_date && !$this->end_date, function ($query) {
+                $query->whereDate('foot_counts.date', '>=', $this->start_date);
+            })
+            ->when(!$this->start_date && $this->end_date, function ($query) {
+                $query->whereDate('foot_counts.date', '<=', $this->end_date);
+            })
+            ->whereNull('foot_counts.deleted_at')
             ->groupBy('foot_counts.date', 'foot_counts.time_period')
             ->orderBy('foot_counts.date', 'asc')
             ->orderByRaw("FIELD(foot_counts.time_period, 'AM', 'PM')")
@@ -87,7 +102,7 @@ class FootCountSummaryExport implements
     public function headings(): array
     {
         return [
-            ["FOOT COUNT SUMMMARY"],
+            ["FOOT COUNT SUMMARY"],
             [],
             [
                 'DATE',
@@ -95,10 +110,11 @@ class FootCountSummaryExport implements
                 'TOTAL MALE',
                 'TOTAL FEMALE',
                 'GRAND TOTAL',
-                'SURVEYOR',
+                'RESEARCHER',
             ]
         ];
     }
+
 
     public function map($foot_count): array
     {
@@ -126,6 +142,62 @@ class FootCountSummaryExport implements
                 }
 
                 $sheet = $event->sheet->getDelegate();
+
+                // Build dynamic date range text
+                $start = $this->start_date ? Carbon::parse($this->start_date)->format('F d, Y') : null;
+                $end   = $this->end_date   ? Carbon::parse($this->end_date)->format('F d, Y') : null;
+
+                if ($start && $end) {
+                    $rangeText = "DATE FILTER: {$start} to {$end}";
+                } elseif ($start && !$end) {
+                    $rangeText = "DATE FILTER: From {$start}";
+                } elseif (!$start && $end) {
+                    $rangeText = "DATE FILTER: Up to {$end}";
+                } else {
+                    $rangeText = "DATE FILTER: ALL DATES";
+                }
+
+                // ===== Add Date Range Label Above Chart =====
+                // Make sure text is created before chart OR after chart to make visible
+                $cell = 'G1:J2';
+
+                $sheet->mergeCells($cell);
+
+                $sheet->setCellValueExplicit(
+                    'G1',
+                    $rangeText,
+                    \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING
+                );
+
+                $sheet->getStyle($cell)->applyFromArray([
+                    'fill' => [
+                        'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
+                        'color' => ['rgb' => 'FFC000']
+                    ],
+                    'font' => [
+                        'bold' => true,
+                        'color' => ['rgb' => '000000'],
+                        'name' => 'Century Gothic',
+                        'size' => 11,
+                    ],
+                    'alignment' => [
+                        'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
+                        'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER,
+                        'wrapText' => true,
+                    ],
+                    'borders' => [
+                        'allBorders' => [
+                            'borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN,
+                            'color' => ['rgb' => '000000']
+                        ]
+                    ]
+                ]);
+
+                // ensure columns are visible
+                foreach (['G', 'H', 'I', 'J'] as $col) {
+                    $sheet->getColumnDimension($col)->setWidth(15);
+                }
+
 
                 // Layout:
                 // Row 1-2: Title (merged)
@@ -220,8 +292,8 @@ class FootCountSummaryExport implements
                 );
 
                 // Place the chart to the right of the table
-                $chart->setTopLeftPosition('H3');
-                $chart->setBottomRightPosition('Q25');
+                $chart->setTopLeftPosition('H4');
+                $chart->setBottomRightPosition('Q26');
 
                 // Keep a reference so WithCharts will include it
                 $this->chart = $chart;

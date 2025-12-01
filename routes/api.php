@@ -83,6 +83,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('target-locations/{target_location}', [TargetLocationController::class, 'show']);
     Route::get('target-locations-users', [TargetLocationController::class, 'target_location_users']);
     Route::get('target-locations', [TargetLocationController::class, 'index']);
+    Route::patch('target-locations-update-locations/{id}', [TargetLocationController::class, 'update_locations']);
 
     // Protected routes (create, store, edit, update)
     Route::middleware(['abilities:target-locations:crud'])->group(function () {

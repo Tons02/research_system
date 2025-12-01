@@ -16,14 +16,14 @@ use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
 class ResponseClassC implements FromCollection, WithMapping, WithHeadings, WithTitle, WithEvents, WithStyles
 {
-    protected $target_location_id, $surveyor_id, $from_date, $to_date, $status;
+    protected $target_location_id, $surveyor_id, $start_date, $end_date, $status;
 
-    public function __construct($target_location_id, $surveyor_id, $from_date, $to_date, $status)
+    public function __construct($target_location_id, $surveyor_id, $start_date, $end_date, $status)
     {
         $this->target_location_id = $target_location_id;
         $this->surveyor_id = $surveyor_id;
-        $this->from_date = $from_date;
-        $this->to_date = $to_date;
+        $this->start_date = $start_date;
+        $this->end_date = $end_date;
         $this->status = $status;
     }
 
@@ -48,8 +48,15 @@ class ResponseClassC implements FromCollection, WithMapping, WithHeadings, WithT
             ->when($this->surveyor_id, function ($query) {
                 $query->where('survey_answers.surveyor_id', $this->surveyor_id);
             })
-            ->when($this->from_date && $this->to_date, function ($query) {
-                $query->whereBetween('survey_answers.date', [$this->from_date, $this->to_date]);
+            ->when($this->start_date && $this->end_date, function ($query) {
+                $query->whereDate('date', '>=', $this->start_date)
+                    ->whereDate('date', '<=', $this->end_date);
+            })
+            ->when($this->start_date && !$this->end_date, function ($query) {
+                $query->whereDate('date', '>=', $this->start_date);
+            })
+            ->when(!$this->start_date && $this->end_date, function ($query) {
+                $query->whereDate('date', '<=', $this->end_date);
             })
             ->groupBy(
                 'question_answers.section',

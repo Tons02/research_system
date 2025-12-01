@@ -18,14 +18,14 @@ use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
 class SurveyAnswerExport implements FromCollection, WithHeadings, WithTitle, WithEvents, WithStyles
 {
-    protected $target_location_id, $surveyor_id, $from_date, $to_date, $status;
+    protected $target_location_id, $surveyor_id, $start_date, $end_date, $status;
 
-    public function __construct($target_location_id, $surveyor_id, $from_date, $to_date, $status)
+    public function __construct($target_location_id, $surveyor_id, $start_date, $end_date, $status)
     {
         $this->target_location_id = $target_location_id;
         $this->surveyor_id = $surveyor_id;
-        $this->from_date = $from_date;
-        $this->to_date = $to_date;
+        $this->start_date = $start_date;
+        $this->end_date = $end_date;
         $this->status = $status;
     }
 
@@ -53,8 +53,15 @@ class SurveyAnswerExport implements FromCollection, WithHeadings, WithTitle, Wit
             ->when($this->surveyor_id, function ($query) {
                 $query->where('survey_answers.surveyor_id', $this->surveyor_id);
             })
-            ->when($this->from_date && $this->to_date, function ($query) {
-                $query->whereBetween('survey_answers.date', [$this->from_date, $this->to_date]);
+            ->when($this->start_date && $this->end_date, function ($query) {
+                $query->whereDate('date', '>=', $this->start_date)
+                    ->whereDate('date', '<=', $this->end_date);
+            })
+            ->when($this->start_date && !$this->end_date, function ($query) {
+                $query->whereDate('date', '>=', $this->start_date);
+            })
+            ->when(!$this->start_date && $this->end_date, function ($query) {
+                $query->whereDate('date', '<=', $this->end_date);
             })
             ->orderBy('survey_answers.date', 'asc')
             ->orderBy('question_answers.id', 'asc')
@@ -130,8 +137,8 @@ class SurveyAnswerExport implements FromCollection, WithHeadings, WithTitle, Wit
             'Section',
             'Question',
             'Answer',
-            'Surveyor ID',
-            'Surveyor Name',
+            'Researcher ID',
+            'Researcher Name',
         ];
     }
 
@@ -156,8 +163,8 @@ class SurveyAnswerExport implements FromCollection, WithHeadings, WithTitle, Wit
                 $sheet->setCellValue('D1', 'Section');
                 $sheet->setCellValue('E1', 'Question');
                 $sheet->setCellValue('F1', 'Answer');
-                $sheet->setCellValue('G1', 'Surveyor ID');
-                $sheet->setCellValue('H1', 'Surveyor');
+                $sheet->setCellValue('G1', 'Researcher ID');
+                $sheet->setCellValue('H1', 'Researcher');
 
                 // Style headers
                 $sheet->getStyle("A1:H1")->applyFromArray([
@@ -244,8 +251,8 @@ class SurveyAnswerExport implements FromCollection, WithHeadings, WithTitle, Wit
                 $sheet->getColumnDimension('D')->setWidth(20);
                 $sheet->getColumnDimension('E')->setWidth(110);
                 $sheet->getColumnDimension('F')->setWidth(40);
-                $sheet->getColumnDimension('G')->setWidth(15);  // Surveyor ID
-                $sheet->getColumnDimension('H')->setWidth(40);  // Surveyor Name
+                $sheet->getColumnDimension('G')->setWidth(17);  // Researcher ID
+                $sheet->getColumnDimension('H')->setWidth(40);  // Researcher Name
 
                 // Border styling for all cells with data
                 $lastRow = $row - 1;

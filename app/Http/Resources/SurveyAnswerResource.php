@@ -19,6 +19,7 @@ class SurveyAnswerResource extends JsonResource
             'target_location_id' => $this->target_location_id,
             'target_location' => [
                 'id' => $this->target_location->id,
+                'title' => $this->target_location->title,
                 'target_location' => implode(', ', array_filter([
                     $this->target_location->region ?? null,
                     $this->target_location->province ?? null,

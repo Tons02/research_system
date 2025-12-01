@@ -74,19 +74,21 @@ class VehicleCountController extends Controller
             "total_left_truck" => $request['total_left_truck'],
             "total_left_jeepney" => $request['total_left_jeepney'],
             "total_left_bus" => $request['total_left_bus'],
+            "total_left_motorcycle" => $request['total_left_motorcycle'],
             "total_left_tricycle" => $request['total_left_tricycle'],
             "total_left_bicycle" => $request['total_left_bicycle'],
             "total_left_e_bike" => $request['total_left_e_bike'],
-            "total_left" =>  $request['total_left_private_car'] + $request['total_left_truck'] + $request['total_left_jeepney'] + $request['total_left_bus'] + $request['total_left_tricycle'] + $request['total_left_bicycle'] + $request['total_left_e_bike'],
+            "total_left" =>  $request['total_left_private_car'] + $request['total_left_truck'] + $request['total_left_jeepney'] + $request['total_left_bus'] + $request['total_left_motorcycle'] + $request['total_left_tricycle'] + $request['total_left_bicycle'] + $request['total_left_e_bike'],
             "total_right_private_car" => $request['total_right_private_car'],
             "total_right_truck" => $request['total_right_truck'],
             "total_right_jeepney" => $request['total_right_jeepney'],
             "total_right_bus" => $request['total_right_bus'],
+            "total_right_motorcycle" => $request['total_right_motorcycle'],
             "total_right_tricycle" => $request['total_right_tricycle'],
             "total_right_bicycle" => $request['total_right_bicycle'],
             "total_right_e_bike" => $request['total_right_e_bike'],
-            "total_right" =>  $request['total_right_private_car'] + $request['total_right_truck'] + $request['total_right_jeepney'] + $request['total_right_bus'] + $request['total_right_tricycle'] + $request['total_right_bicycle'] + $request['total_right_e_bike'],
-            "grand_total" =>  $request['total_right_private_car'] + $request['total_right_truck'] + $request['total_right_jeepney'] + $request['total_right_bus'] + $request['total_right_tricycle'] + $request['total_right_bicycle'] + $request['total_right_e_bike'] +
+            "total_right" =>  $request['total_right_private_car'] + $request['total_right_truck'] + $request['total_right_jeepney'] + $request['total_right_bus'] + $request['total_right_motorcycle'] + $request['total_right_tricycle'] + $request['total_right_bicycle'] + $request['total_right_e_bike'],
+            "grand_total" =>  $request['total_right_private_car'] + $request['total_right_truck'] + $request['total_right_jeepney'] + $request['total_right_bus'] + $request['total_left_motorcycle'] +  $request['total_right_motorcycle'] + $request['total_right_tricycle'] + $request['total_right_bicycle'] + $request['total_right_e_bike'] +
                 $request['total_left_private_car'] + $request['total_left_truck'] + $request['total_left_jeepney'] + $request['total_left_bus'] + $request['total_left_tricycle'] + $request['total_left_bicycle'] + $request['total_left_e_bike'],
             "surveyor_id" => $user->id,
             "sync_at" => Carbon::now(),
@@ -113,20 +115,21 @@ class VehicleCountController extends Controller
             "total_left_truck" => $request['total_left_truck'],
             "total_left_jeepney" => $request['total_left_jeepney'],
             "total_left_bus" => $request['total_left_bus'],
+            "total_left_motorcycle" => $request['total_left_motorcycle'],
             "total_left_tricycle" => $request['total_left_tricycle'],
             "total_left_bicycle" => $request['total_left_bicycle'],
             "total_left_e_bike" => $request['total_left_e_bike'],
-            "total_left" => $request['total_left_private_car'] + $request['total_left_truck'] + $request['total_left_jeepney'] + $request['total_left_bus'] + $request['total_left_tricycle'] + $request['total_left_bicycle'] + $request['total_left_e_bike'],
+            "total_left" => $request['total_left_private_car'] + $request['total_left_truck'] + $request['total_left_jeepney'] + $request['total_left_bus'] + $request['total_left_motorcycle'] +  $request['total_left_tricycle'] + $request['total_left_bicycle'] + $request['total_left_e_bike'],
             "total_right_private_car" => $request['total_right_private_car'],
             "total_right_truck" => $request['total_right_truck'],
             "total_right_jeepney" => $request['total_right_jeepney'],
             "total_right_bus" => $request['total_right_bus'],
+            "total_right_motorcycle" => $request['total_right_motorcycle'],
             "total_right_tricycle" => $request['total_right_tricycle'],
             "total_right_bicycle" => $request['total_right_bicycle'],
             "total_right_e_bike" => $request['total_right_e_bike'],
-            "total_right" => $request['total_right_private_car'] + $request['total_right_truck'] + $request['total_right_jeepney'] + $request['total_right_bus'] + $request['total_right_tricycle'] + $request['total_right_bicycle'] + $request['total_right_e_bike'],
-            "grand_total" =>
-            $request['total_right_private_car'] + $request['total_right_truck'] + $request['total_right_jeepney'] + $request['total_right_bus'] + $request['total_right_tricycle'] + $request['total_right_bicycle'] + $request['total_right_e_bike'] +
+            "total_right" =>  $request['total_right_private_car'] + $request['total_right_truck'] + $request['total_right_jeepney'] + $request['total_right_bus'] + $request['total_right_motorcycle'] + $request['total_right_tricycle'] + $request['total_right_bicycle'] + $request['total_right_e_bike'],
+            "grand_total" =>  $request['total_right_private_car'] + $request['total_right_truck'] + $request['total_right_jeepney'] + $request['total_right_bus'] + $request['total_left_motorcycle'] +  $request['total_right_motorcycle'] + $request['total_right_tricycle'] + $request['total_right_bicycle'] + $request['total_right_e_bike'] +
                 $request['total_left_private_car'] + $request['total_left_truck'] + $request['total_left_jeepney'] + $request['total_left_bus'] + $request['total_left_tricycle'] + $request['total_left_bicycle'] + $request['total_left_e_bike'],
         ]);
 
@@ -242,6 +245,7 @@ class VehicleCountController extends Controller
                     $countData['total_left_truck'] +
                     $countData['total_left_jeepney'] +
                     $countData['total_left_bus'] +
+                    $countData['total_left_motorcycle'] +
                     $countData['total_left_tricycle'] +
                     $countData['total_left_bicycle'] +
                     $countData['total_left_e_bike'];
@@ -250,6 +254,7 @@ class VehicleCountController extends Controller
                     $countData['total_right_truck'] +
                     $countData['total_right_jeepney'] +
                     $countData['total_right_bus'] +
+                    $countData['total_right_motorcycle'] +
                     $countData['total_right_tricycle'] +
                     $countData['total_right_bicycle'] +
                     $countData['total_right_e_bike'];
@@ -263,6 +268,7 @@ class VehicleCountController extends Controller
                     'total_left_truck' => $countData['total_left_truck'],
                     'total_left_jeepney' => $countData['total_left_jeepney'],
                     'total_left_bus' => $countData['total_left_bus'],
+                    'total_left_motorcycle' => $countData['total_left_motorcycle'],
                     'total_left_tricycle' => $countData['total_left_tricycle'],
                     'total_left_bicycle' => $countData['total_left_bicycle'],
                     'total_left_e_bike' => $countData['total_left_e_bike'],
@@ -271,6 +277,7 @@ class VehicleCountController extends Controller
                     'total_right_truck' => $countData['total_right_truck'],
                     'total_right_jeepney' => $countData['total_right_jeepney'],
                     'total_right_bus' => $countData['total_right_bus'],
+                    'total_right_motorcycle' => $countData['total_right_motorcycle'],
                     'total_right_tricycle' => $countData['total_right_tricycle'],
                     'total_right_bicycle' => $countData['total_right_bicycle'],
                     'total_right_e_bike' => $countData['total_right_e_bike'],
@@ -335,6 +342,23 @@ class VehicleCountController extends Controller
         $target_locations = $request->query('target_location_id');
         $surveyor_id = $request->query('surveyor_id');
 
-        return Excel::download(new TrafficCountExport($target_locations, $surveyor_id), 'Vehicle Counts.xlsx');
+        // Parse and normalize dates
+        $start_date = $request->query('start_date')
+            ? Carbon::parse($request->query('start_date'))->startOfDay()
+            : null;
+
+        $end_date = $request->query('end_date')
+            ? Carbon::parse($request->query('end_date'))->endOfDay()
+            : null;
+
+        return Excel::download(
+            new TrafficCountExport(
+                $target_locations,
+                $surveyor_id,
+                $start_date,
+                $end_date
+            ),
+            'Vehicle Counts.xlsx'
+        );
     }
 }

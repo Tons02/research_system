@@ -37,11 +37,15 @@ class ResponseClassDE implements FromCollection, WithMapping, WithHeadings, With
                 'question_answers.section',
                 'survey_answers.target_location_id',
                 'question_answers.question',
-                'question_answers.answer',
+                DB::raw("CASE
+                    WHEN question_answers.answer IS NULL OR question_answers.answer = ''
+                    THEN 'N/A'
+                    ELSE question_answers.answer
+                END AS answer"),
                 DB::raw('COUNT(question_answers.id) as answer_count'),
-                DB::raw('MIN(question_answers.id) as min_id') // Include for ordering
+                DB::raw('MIN(question_answers.id) as min_id')
             )
-            ->where('question_answers.income_class', 'Class DE')
+            ->where('question_answers.monthly_utility_expenses', 'Class DE')
             ->when($target_location_id, function ($query) use ($target_location_id) {
                 return $query->where('survey_answers.target_location_id', $target_location_id);
             })
@@ -62,7 +66,11 @@ class ResponseClassDE implements FromCollection, WithMapping, WithHeadings, With
                 'question_answers.section',
                 'survey_answers.target_location_id',
                 'question_answers.question',
-                'question_answers.answer'
+                DB::raw("CASE
+                    WHEN question_answers.answer IS NULL OR question_answers.answer = ''
+                    THEN 'N/A'
+                    ELSE question_answers.answer
+                END")
             )
             ->orderBy('min_id', 'asc')
             ->get();
@@ -92,7 +100,7 @@ class ResponseClassDE implements FromCollection, WithMapping, WithHeadings, With
 
             if ($existingQuestionKey !== null) {
                 $sections[$section]['questions'][$existingQuestionKey]['answers'][] = [
-                    'answer' => $item->answer,
+                    'answer' => $item->answer ?? 'N/A',
                     'count' => $item->answer_count
                 ];
             } else {
@@ -100,7 +108,7 @@ class ResponseClassDE implements FromCollection, WithMapping, WithHeadings, With
                     'question' => $question,
                     'answers' => [
                         [
-                            'answer' => $item->answer,
+                            'answer' => $item->answer ?? 'N/A',
                             'count' => $item->answer_count
                         ]
                     ]

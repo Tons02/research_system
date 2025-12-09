@@ -15,6 +15,8 @@ class QuestionAnswer extends Model
         'survey_id',
         'income_class',
         'sub_income_class',
+        'monthly_utility_expenses',
+        'sub_monthly_utility_expenses',
         'section',
         'question_type',
         'question',

@@ -250,7 +250,6 @@ class SurveyAnswerController extends Controller
             ]);
 
             $questionnaire_answers = $request->input('questionnaire_answer', []); // Ensure it's an array
-
             foreach ($questionnaire_answers as $section) {
                 foreach ($section['questions'] as $question) {
                     // Handle Grid Type Questions
@@ -262,8 +261,10 @@ class SurveyAnswerController extends Controller
 
                             QuestionAnswer::create([
                                 'survey_id' => $create_survey_answer->id,
-                                'income_class' => $request["income_class"], // why is this not working
-                                'sub_income_class' => $request["sub_income_class"], // why is this not working
+                                'income_class' => $request["income_class"],
+                                'sub_income_class' => $request["sub_income_class"],
+                                'monthly_utility_expenses' => $request["monthly_utility_expenses"],
+                                'sub_monthly_utility_expenses' => $request["sub_monthly_utility_expenses"],
                                 'section' => $section['section'],
                                 'question_type' => $question['type'],
                                 'question' => $question['question'] . ' - ' . $gridAnswer['rowQuestion'],
@@ -277,9 +278,9 @@ class SurveyAnswerController extends Controller
                     $answers = isset($question['answer']) && is_array($question['answer']) ? $question['answer'] : [];
 
                     foreach ($answers as $answer) {
-                        if (empty($answer)) {
-                            continue; // Skip empty answers
-                        }
+                        // if (empty($answer)) {
+                        //     continue; // Skip empty answers
+                        // }
 
                         // Handle "Other" responses correctly
                         $finalAnswer = ($answer === "Other" && isset($question['otherAnswer']))
@@ -290,6 +291,8 @@ class SurveyAnswerController extends Controller
                             'survey_id' => $create_survey_answer->id,
                             'income_class' => $request["income_class"],
                             'sub_income_class' => $request["sub_income_class"],
+                            'monthly_utility_expenses' => $request["monthly_utility_expenses"],
+                            'sub_monthly_utility_expenses' => $request["sub_monthly_utility_expenses"],
                             'section' => $section['section'],
                             'question_type' => $question['type'],
                             'question' => $question['question'],
@@ -403,14 +406,16 @@ class SurveyAnswerController extends Controller
                         // Handle Grid Type Questions
                         if ($question['type'] === 'grid') {
                             foreach ($question['answer'] as $gridAnswer) {
-                                if (empty($gridAnswer['rowAnswer'])) {
-                                    continue;
-                                }
+                                // if (empty($gridAnswer['rowAnswer'])) {
+                                //     continue;
+                                // }
 
                                 QuestionAnswer::create([
                                     'survey_id' => $create_survey_answer->id,
                                     'income_class' => $surveyData["income_class"] ?? null,
                                     'sub_income_class' => $surveyData["sub_income_class"] ?? null,
+                                    'monthly_utility_expenses' => $surveyData["monthly_utility_expenses"],
+                                    'sub_monthly_utility_expenses' => $surveyData["sub_monthly_utility_expenses"],
                                     'section' => $section['section'],
                                     'question_type' => $question['type'],
                                     'question' => $question['question'] . ' - ' . $gridAnswer['rowQuestion'],
@@ -424,9 +429,6 @@ class SurveyAnswerController extends Controller
                         $answers = isset($question['answer']) && is_array($question['answer']) ? $question['answer'] : [];
 
                         foreach ($answers as $answer) {
-                            if (empty($answer)) {
-                                continue;
-                            }
 
                             // Handle "Other" responses
                             $finalAnswer = ($answer === "Other" && isset($question['otherAnswer']))
@@ -437,6 +439,8 @@ class SurveyAnswerController extends Controller
                                 'survey_id' => $create_survey_answer->id,
                                 'income_class' => $surveyData["income_class"] ?? null,
                                 'sub_income_class' => $surveyData["sub_income_class"] ?? null,
+                                'monthly_utility_expenses' => $surveyData["monthly_utility_expenses"],
+                                'sub_monthly_utility_expenses' => $surveyData["sub_monthly_utility_expenses"],
                                 'section' => $section['section'],
                                 'question_type' => $question['type'],
                                 'question' => $question['question'],
@@ -497,23 +501,6 @@ class SurveyAnswerController extends Controller
         $start_date = $request->query('start_date');
         $end_date = $request->query('end_date');
         $status = $request->query('status');
-
-        // return $totalClassC = SurveyAnswer::where('target_location_id', $target_location_id)
-        //     ->where('income_class', 'Class AB')
-        //     ->when($surveyor_id, function ($query) use ($surveyor_id) {
-        //         $query->where('surveyor_id', $surveyor_id);
-        //     })
-        //     ->when($start_date && $end_date, function ($query) use ($start_date, $end_date) {
-        //         $query->whereDate('date', '>=', $start_date)
-        //             ->whereDate('date', '<=', $end_date);
-        //     })
-        //     ->when($start_date && !$end_date, function ($query) use ($start_date) {
-        //         $query->whereDate('date', '>=', $start_date);
-        //     })
-        //     ->when(!$start_date && $end_date, function ($query) use ($end_date) {
-        //         $query->whereDate('date', '<=', $end_date);
-        //     })
-        //     ->count();
 
         return Excel::download(new OverAllReport($target_location_id, $surveyor_id, $start_date, $end_date, $status),  ' Survey Answers.xlsx');
     }

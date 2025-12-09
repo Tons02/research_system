@@ -38,7 +38,11 @@ class SurveyAnswerExport implements FromCollection, WithHeadings, WithTitle, Wit
             ->join('users', 'survey_answers.surveyor_id', '=', 'users.id') // join surveyor
             ->select(
                 'survey_answers.id as survey_id',
-                'survey_answers.name',
+                DB::raw("CASE
+                        WHEN survey_answers.name IS NULL OR survey_answers.name = ''
+                        THEN 'N/A'
+                        ELSE survey_answers.name
+                END AS name"),
                 'question_answers.section',
                 'survey_answers.target_location_id',
                 'survey_answers.date',
@@ -94,7 +98,7 @@ class SurveyAnswerExport implements FromCollection, WithHeadings, WithTitle, Wit
 
             $groupedBySurvey[$surveyId]['sections'][$section]['questions'][] = [
                 'question' => $item->question,
-                'answer' => $item->answer
+                'answer' => $item->answer ?? 'N/A',
             ];
         }
 
@@ -205,6 +209,7 @@ class SurveyAnswerExport implements FromCollection, WithHeadings, WithTitle, Wit
                             $question = $qa['question'];
                             $answer = $qa['answer'];
 
+                            $answer = ($answer === '' || $answer === null) ? 'N/A' : $answer;
                             // Obfuscate Name answer
                             if (strtolower(trim($question)) === 'name') {
                                 $answer = $name;
@@ -246,7 +251,7 @@ class SurveyAnswerExport implements FromCollection, WithHeadings, WithTitle, Wit
 
                 // Set column widths
                 $sheet->getColumnDimension('A')->setWidth(25);
-                $sheet->getColumnDimension('B')->setWidth(10);
+                $sheet->getColumnDimension('B')->setWidth(12);
                 $sheet->getColumnDimension('C')->setWidth(25);
                 $sheet->getColumnDimension('D')->setWidth(20);
                 $sheet->getColumnDimension('E')->setWidth(110);

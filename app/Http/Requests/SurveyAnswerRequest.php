@@ -27,9 +27,6 @@ class SurveyAnswerRequest extends FormRequest
                 "required",
                 "integer"
             ],
-            "name" => [
-                "required",
-            ],
             "age" => [
                 "required",
                 "integer"
@@ -42,7 +39,6 @@ class SurveyAnswerRequest extends FormRequest
                 "required",
             ],
             "contact_number" => [
-                "required",
                 "regex:/^\+63\d{10}$/",
             ],
             "date" => [

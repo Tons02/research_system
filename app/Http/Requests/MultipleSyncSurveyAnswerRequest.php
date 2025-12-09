@@ -35,9 +35,6 @@ class MultipleSyncSurveyAnswerRequest extends FormRequest
                 "required",
                 "integer"
             ],
-            "survey_answers.*.name" => [
-                "required",
-            ],
             "survey_answers.*.age" => [
                 "required",
                 "integer"
@@ -50,7 +47,6 @@ class MultipleSyncSurveyAnswerRequest extends FormRequest
                 "required",
             ],
             "survey_answers.*.contact_number" => [
-                "required",
                 "regex:/^\+63\d{10}$/",
             ],
             "survey_answers.*.date" => [

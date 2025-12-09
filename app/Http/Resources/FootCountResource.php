@@ -30,6 +30,7 @@ class FootCountResource extends JsonResource
                 'id' => $this->surveyor->id,
                 'name' => $this->surveyor->first_name . ' ' . $this->surveyor->middle_name . ' ' . $this->surveyor->last_name,
             ],
+            'target_location' => $this->target_locations,
             'target_locations' => [
                 'id' => $this->target_locations->first()?->id,
                 'title' => $this->target_locations->title,

@@ -26,7 +26,7 @@ class DemographicExport implements FromCollection, WithTitle, WithHeadings, With
 {
     use ApiResponse;
 
-    protected $target_location_id, $sub_income_class_data, $income_class, $class_counts, $education_data, $employment, $occupation_of_employed, $surveyor_id, $start_date, $end_date, $status;
+    protected $target_location_id, $sub_monthly_utility_expenses_data, $monthly_utility_expenses, $class_counts, $education_data, $employment, $occupation_of_employed, $surveyor_id, $start_date, $end_date, $status;
 
     public function __construct($target_location_id, $surveyor_id, $start_date, $end_date, $status)
     {
@@ -39,7 +39,7 @@ class DemographicExport implements FromCollection, WithTitle, WithHeadings, With
 
         // Total count for 'Class C'
         $totalClassC = SurveyAnswer::where('target_location_id', $target_location_id)
-            ->where('income_class', 'Class C')
+            ->where('monthly_utility_expenses', 'Class C')
             ->when($this->surveyor_id, function ($query) {
                 $query->where('surveyor_id', $this->surveyor_id);
             })
@@ -57,9 +57,9 @@ class DemographicExport implements FromCollection, WithTitle, WithHeadings, With
 
 
         if ($totalClassC === 0) {
-            $this->sub_income_class_data = collect([
+            $this->sub_monthly_utility_expenses_data = collect([
                 (object)[
-                    'sub_income_class' => 'TOTAL',
+                    'sub_monthly_utility_expenses' => 'TOTAL',
                     'count' => 0,
                     'percentage' => 0,
                 ]
@@ -68,10 +68,10 @@ class DemographicExport implements FromCollection, WithTitle, WithHeadings, With
 
             // Get raw data without rounding
             $rawData = SurveyAnswer::selectRaw("
-                sub_income_class,
+                sub_monthly_utility_expenses,
                 COUNT(*) as count")
                 ->where('target_location_id', $target_location_id)
-                ->where('income_class', 'Class C')
+                ->where('monthly_utility_expenses', 'Class C')
                 ->when($this->surveyor_id, function ($query) {
                     $query->where('surveyor_id', $this->surveyor_id);
                 })
@@ -85,7 +85,7 @@ class DemographicExport implements FromCollection, WithTitle, WithHeadings, With
                 ->when(!$this->start_date && $this->end_date, function ($query) {
                     $query->whereDate('date', '<=', $this->end_date);
                 })
-                ->groupBy('sub_income_class')
+                ->groupBy('sub_monthly_utility_expenses')
                 ->get();
 
 
@@ -96,7 +96,7 @@ class DemographicExport implements FromCollection, WithTitle, WithHeadings, With
                 $unrounded = ($row->count / $totalClassC) * 100;
                 $rounded = floor($unrounded); // or round($unrounded), but we use floor to leave room for adjustments
                 $percentageData[] = [
-                    'sub_income_class' => $row->sub_income_class,
+                    'sub_monthly_utility_expenses' => $row->sub_monthly_utility_expenses,
                     'count' => $row->count,
                     'rounded' => $rounded,
                     'remainder' => $unrounded - $rounded,
@@ -112,22 +112,22 @@ class DemographicExport implements FromCollection, WithTitle, WithHeadings, With
             }
 
             // Format as collection
-            $this->sub_income_class_data = collect();
+            $this->sub_monthly_utility_expenses_data = collect();
             $totalCount = 0;
             $totalPercent = 0;
             foreach ($percentageData as $item) {
                 $totalCount += $item['count'];
                 $totalPercent += $item['rounded'];
-                $this->sub_income_class_data->push((object)[
-                    'sub_income_class' => $item['sub_income_class'],
+                $this->sub_monthly_utility_expenses_data->push((object)[
+                    'sub_monthly_utility_expenses' => $item['sub_monthly_utility_expenses'],
                     'count' => $item['count'],
                     'percentage' => $item['rounded'],
                 ]);
             }
 
             // Add total row
-            $this->sub_income_class_data->push((object)[
-                'sub_income_class' => 'TOTAL',
+            $this->sub_monthly_utility_expenses_data->push((object)[
+                'sub_monthly_utility_expenses' => 'TOTAL',
                 'count' => $totalCount,
                 'percentage' => $totalPercent,
             ]);
@@ -135,7 +135,7 @@ class DemographicExport implements FromCollection, WithTitle, WithHeadings, With
 
             // class C query
             $this->class_counts = SurveyAnswer::where('target_location_id', $target_location_id)
-                ->distinct('income_class')
+                ->distinct('monthly_utility_expenses')
                 ->when($this->surveyor_id, function ($query) {
                     $query->where('surveyor_id', $this->surveyor_id);
                 })
@@ -151,7 +151,7 @@ class DemographicExport implements FromCollection, WithTitle, WithHeadings, With
 
         // Get existing classes from the database
         $incomeClasses = DB::table('survey_answers')
-            ->select('income_class')
+            ->select('monthly_utility_expenses')
             ->where('target_location_id', $target_location_id)
             ->when($this->surveyor_id, function ($query) {
                 $query->where('surveyor_id', $this->surveyor_id);
@@ -166,9 +166,9 @@ class DemographicExport implements FromCollection, WithTitle, WithHeadings, With
             ->when(!$this->start_date && $this->end_date, function ($query) {
                 $query->whereDate('date', '<=', $this->end_date);
             })
-            ->whereNotNull('income_class')
+            ->whereNotNull('monthly_utility_expenses')
             ->distinct()
-            ->pluck('income_class')
+            ->pluck('monthly_utility_expenses')
             ->toArray();
 
         // // Merge with required classes and remove duplicates
@@ -176,7 +176,7 @@ class DemographicExport implements FromCollection, WithTitle, WithHeadings, With
 
         // Get all records with their educational attainment and income class
         $records = DB::table('survey_answers')
-            ->select('target_location_id', 'educational_attainment', 'income_class')
+            ->select('target_location_id', 'educational_attainment', 'monthly_utility_expenses')
             ->where('target_location_id', $target_location_id)
             ->when($surveyor_id, function ($query) use ($surveyor_id) {
                 $query->where('surveyor_id', $surveyor_id);
@@ -198,7 +198,7 @@ class DemographicExport implements FromCollection, WithTitle, WithHeadings, With
 
         // Calculate actual totals from records
         foreach ($incomeClasses as $class) {
-            $classTotals[$class] = $records->where('income_class', $class)->count();
+            $classTotals[$class] = $records->where('monthly_utility_expenses', $class)->count();
         }
 
         $totalRecords = $records->count();
@@ -210,7 +210,7 @@ class DemographicExport implements FromCollection, WithTitle, WithHeadings, With
 
                 foreach ($incomeClasses as $class) {
                     $key = strtolower(str_replace(' ', '_', $class));
-                    $count = $group->where('income_class', $class)->count();
+                    $count = $group->where('monthly_utility_expenses', $class)->count();
                     $stats[$key . '_count'] = $count;
 
                     // Make sure percentages are calculated only when the total for the class is greater than zero
@@ -261,7 +261,7 @@ class DemographicExport implements FromCollection, WithTitle, WithHeadings, With
         // employment data
 
         // First get the counts for each income class
-        $classABTotal = SurveyAnswer::where('income_class', 'Class AB')
+        $classABTotal = SurveyAnswer::where('monthly_utility_expenses', 'Class AB')
             ->where('target_location_id', $target_location_id)
             ->when($this->surveyor_id, function ($query) {
                 $query->where('surveyor_id', $this->surveyor_id);
@@ -277,7 +277,7 @@ class DemographicExport implements FromCollection, WithTitle, WithHeadings, With
                 $query->whereDate('date', '<=', $this->end_date);
             })
             ->count();
-        $classCTotal = SurveyAnswer::where('income_class', 'Class C')
+        $classCTotal = SurveyAnswer::where('monthly_utility_expenses', 'Class C')
             ->where('target_location_id', $target_location_id)
             ->when($this->surveyor_id, function ($query) {
                 $query->where('surveyor_id', $this->surveyor_id);
@@ -293,7 +293,7 @@ class DemographicExport implements FromCollection, WithTitle, WithHeadings, With
                 $query->whereDate('date', '<=', $this->end_date);
             })
             ->count();
-        $classDETotal = SurveyAnswer::where('income_class', 'Class DE')
+        $classDETotal = SurveyAnswer::where('monthly_utility_expenses', 'Class DE')
             ->where('target_location_id', $target_location_id)
             ->when($this->surveyor_id, function ($query) {
                 $query->where('surveyor_id', $this->surveyor_id);
@@ -331,7 +331,7 @@ class DemographicExport implements FromCollection, WithTitle, WithHeadings, With
         $statuses = ['EMPLOYED', 'SELF-EMPLOYED', 'UNEMPLOYED'];
 
         $report = collect($statuses)->map(function ($status) use ($classABTotal, $classCTotal, $classDETotal, $overallTotal, $target_location_id) {
-            $classABCount = SurveyAnswer::where('income_class', 'Class AB')
+            $classABCount = SurveyAnswer::where('monthly_utility_expenses', 'Class AB')
                 ->where('employment_status', $status)
                 ->where('target_location_id', $target_location_id)
                 ->when($this->surveyor_id, function ($query) {
@@ -349,7 +349,7 @@ class DemographicExport implements FromCollection, WithTitle, WithHeadings, With
                 })
                 ->count();
 
-            $classCCount = SurveyAnswer::where('income_class', 'Class C')
+            $classCCount = SurveyAnswer::where('monthly_utility_expenses', 'Class C')
                 ->where('employment_status', $status)
                 ->where('target_location_id', $target_location_id)
                 ->when($this->surveyor_id, function ($query) {
@@ -367,7 +367,7 @@ class DemographicExport implements FromCollection, WithTitle, WithHeadings, With
                 })
                 ->count();
 
-            $classDECount = SurveyAnswer::where('income_class', 'Class DE')
+            $classDECount = SurveyAnswer::where('monthly_utility_expenses', 'Class DE')
                 ->where('employment_status', $status)
                 ->where('target_location_id', $target_location_id)
                 ->when($this->surveyor_id, function ($query) {
@@ -526,7 +526,7 @@ class DemographicExport implements FromCollection, WithTitle, WithHeadings, With
             ->count();
 
         // Now percentages will be correct
-        $data = SurveyAnswer::selectRaw("income_class, COUNT(*) as total, (COUNT(*) / $totalCount) * 100 as percentage")
+        $data = SurveyAnswer::selectRaw("monthly_utility_expenses, COUNT(*) as total, (COUNT(*) / $totalCount) * 100 as percentage")
             ->where('target_location_id', $target_location_id)
             ->when($this->surveyor_id, function ($query) {
                 $query->where('surveyor_id', $this->surveyor_id);
@@ -541,8 +541,8 @@ class DemographicExport implements FromCollection, WithTitle, WithHeadings, With
             ->when(!$this->start_date && $this->end_date, function ($query) {
                 $query->whereDate('date', '<=', $this->end_date);
             })
-            ->groupBy('income_class')
-            ->orderBy('income_class', 'asc')
+            ->groupBy('monthly_utility_expenses')
+            ->orderBy('monthly_utility_expenses', 'asc')
             ->get();
 
         // Round total and percentage to remove decimals
@@ -555,7 +555,7 @@ class DemographicExport implements FromCollection, WithTitle, WithHeadings, With
         $totalPercentage = $data->sum('percentage');
 
         $data->push((object)[
-            'income_class' => 'TOTAL',
+            'monthly_utility_expenses' => 'TOTAL',
             'total' => $totalN,
             'percentage' => round($totalPercentage),
         ]);
@@ -587,7 +587,7 @@ class DemographicExport implements FromCollection, WithTitle, WithHeadings, With
     public function map($demographics): array
     {
         return [
-            $demographics->income_class,
+            $demographics->monthly_utility_expenses,
             $demographics->total,
             $demographics->percentage
         ];
@@ -701,9 +701,9 @@ class DemographicExport implements FromCollection, WithTitle, WithHeadings, With
                 // Insert sub-income class data dynamically
                 $row = 11;
 
-                $this->sub_income_class_data = $this->sub_income_class_data ?? [];
-                foreach ($this->sub_income_class_data as $subIncome) {
-                    $sheet->setCellValue("A{$row}", $subIncome->sub_income_class);
+                $this->sub_monthly_utility_expenses_data = $this->sub_monthly_utility_expenses_data ?? [];
+                foreach ($this->sub_monthly_utility_expenses_data as $subIncome) {
+                    $sheet->setCellValue("A{$row}", $subIncome->sub_monthly_utility_expenses);
                     $sheet->setCellValue("B{$row}", $subIncome->count);
                     $sheet->setCellValue("C{$row}", $subIncome->percentage);
 

@@ -61,11 +61,11 @@ Route::middleware(['auth:sanctum'])->group(function () {
     });
 
     //Form Controller
-    Route::put('form-archived/{id}', [FormController::class, 'archived'])->middleware(['abilities:form-management:crud']);
-    Route::resource("forms", FormController::class)->middleware(['abilities:form-management:crud']);
+    Route::put('form-archived/{id}', [FormController::class, 'archived']);
+    Route::resource("forms", FormController::class);
 
     //Form Controller
-    Route::put('form-history-archived/{id}', [FormHistoriesController::class, 'archived'])->middleware(['abilities:form-management:crud']);
+    Route::put('form-history-archived/{id}', [FormHistoriesController::class, 'archived']);
 
     Route::get('forms-history', [FormHistoriesController::class, 'index']);
     // Protected routes (create, store, edit, update, destroy)

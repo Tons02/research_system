@@ -86,7 +86,7 @@ class FootCountExport implements FromCollection, WithHeadings, WithStyles, WithT
                 'TOTAL MALE',
                 'TOTAL FEMALE',
                 'GRAND TOTAL',
-                'SURVEYOR',
+                'RESEARCHER',
                 'CREATED AT',
                 'SYNC AT',
             ]

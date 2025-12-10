@@ -47,7 +47,7 @@ class FormsRequest extends FormRequest
     public function messages()
     {
         return [
-            'sections.*.section.distinct' => 'Section title must be unique. Duplicate section name found.',
+            'sections.*.section.distinct' => 'Section title must be unique. Duplicate section title found.',
             'sections.*.section.required' => 'Section title is required.',
         ];
     }

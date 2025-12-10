@@ -16,6 +16,7 @@ class VehicleCountFilter extends QueryFilters
         'time_period',
         'total_left',
         'total_right',
+        'grand_total',
     ];
 
 

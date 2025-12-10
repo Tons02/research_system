@@ -15,6 +15,7 @@ class FootCountFilter extends QueryFilters
         'time_period',
         'total_male',
         'total_female',
+        'grand_total',
     ];
 
     protected array $relationSearch = [

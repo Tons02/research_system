@@ -12,7 +12,6 @@ class VehicleCountFilter extends QueryFilters
     protected array $columnSearch = [
         'id',
         'date',
-        'time',
         'time_period',
         'total_left',
         'total_right',

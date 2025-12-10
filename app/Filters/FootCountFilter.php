@@ -11,7 +11,6 @@ class FootCountFilter extends QueryFilters
 
     protected array $columnSearch = [
         'date',
-        'time',
         'time_period',
         'total_male',
         'total_female',

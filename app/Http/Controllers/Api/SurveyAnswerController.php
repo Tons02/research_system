@@ -255,9 +255,6 @@ class SurveyAnswerController extends Controller
                     // Handle Grid Type Questions
                     if ($question['type'] === 'grid') {
                         foreach ($question['answer'] as $gridAnswer) {
-                            if (empty($gridAnswer['rowAnswer'])) {
-                                continue; // Skip empty answers
-                            }
 
                             QuestionAnswer::create([
                                 'survey_id' => $create_survey_answer->id,
@@ -278,9 +275,6 @@ class SurveyAnswerController extends Controller
                     $answers = isset($question['answer']) && is_array($question['answer']) ? $question['answer'] : [];
 
                     foreach ($answers as $answer) {
-                        // if (empty($answer)) {
-                        //     continue; // Skip empty answers
-                        // }
 
                         // Handle "Other" responses correctly
                         $finalAnswer = ($answer === "Other" && isset($question['otherAnswer']))
@@ -318,6 +312,34 @@ class SurveyAnswerController extends Controller
         $surveys = $request->input('survey_answers', []);
         $successfulSyncs = [];
         $failedSyncs = [];
+
+        // 🚨 VALIDATE TOTAL FIRST — STOP EVERYTHING BEFORE LOOP
+        if (!empty($surveys)) {
+
+            // Get the target_location_id from first survey
+            $firstTargetLocation = TargetLocation::find($surveys[0]["target_location_id"]);
+
+            if (!$firstTargetLocation) {
+                return response()->json([
+                    'message' => 'Target location not found.'
+                ], 422);
+            }
+
+            // Count already-synced responses for this target location
+            $alreadySynced = SurveyAnswer::where('target_location_id', $surveys[0]["target_location_id"])
+                ->count();
+
+            // Remaining slots = limit - existing responses
+            $remainingSlot = $firstTargetLocation->response_limit - $alreadySynced;
+
+            // If user is trying to sync MORE than allowed
+            if (count($surveys) > $remainingSlot) {
+                return response()->json([
+                    'message' => "You can only sync {$remainingSlot} more survey answer(s).",
+                    'error' => 'Exceeded response limit. Please reduce the number of surveys.'
+                ], 422);
+            }
+        }
 
         // Validate all surveys first before processing
         foreach ($surveys as $index => $surveyData) {
@@ -406,9 +428,6 @@ class SurveyAnswerController extends Controller
                         // Handle Grid Type Questions
                         if ($question['type'] === 'grid') {
                             foreach ($question['answer'] as $gridAnswer) {
-                                // if (empty($gridAnswer['rowAnswer'])) {
-                                //     continue;
-                                // }
 
                                 QuestionAnswer::create([
                                     'survey_id' => $create_survey_answer->id,

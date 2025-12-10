@@ -39,7 +39,16 @@ class FormsRequest extends FormRequest
             ],
             "sections.*" => [
                 "distinct"
-            ]
+            ],
+            'sections.*.section' => ['required', 'distinct'],
+        ];
+    }
+
+    public function messages()
+    {
+        return [
+            'sections.*.section.distinct' => 'Section title must be unique. Duplicate section name found.',
+            'sections.*.section.required' => 'Section title is required.',
         ];
     }
 }

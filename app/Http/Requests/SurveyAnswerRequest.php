@@ -39,6 +39,7 @@ class SurveyAnswerRequest extends FormRequest
                 "required",
             ],
             "contact_number" => [
+                "nullable",
                 "regex:/^\+63\d{10}$/",
             ],
             "date" => [

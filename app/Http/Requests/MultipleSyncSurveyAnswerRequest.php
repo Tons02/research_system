@@ -47,6 +47,7 @@ class MultipleSyncSurveyAnswerRequest extends FormRequest
                 "required",
             ],
             "survey_answers.*.contact_number" => [
+                "nullable",
                 "regex:/^\+63\d{10}$/",
             ],
             "survey_answers.*.date" => [

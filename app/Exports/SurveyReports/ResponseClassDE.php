@@ -66,11 +66,7 @@ class ResponseClassDE implements FromCollection, WithMapping, WithHeadings, With
                 'question_answers.section',
                 'survey_answers.target_location_id',
                 'question_answers.question',
-                DB::raw("CASE
-                    WHEN question_answers.answer IS NULL OR question_answers.answer = ''
-                    THEN 'N/A'
-                    ELSE question_answers.answer
-                END")
+                'answer'
             )
             ->orderBy('min_id', 'asc')
             ->get();

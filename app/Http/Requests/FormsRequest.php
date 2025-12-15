@@ -40,7 +40,9 @@ class FormsRequest extends FormRequest
             "sections.*" => [
                 "distinct"
             ],
-            'sections.*.section' => ['required', 'distinct'],
+            'sections.*.section' => [
+                'distinct'
+            ],
         ];
     }
 
@@ -48,7 +50,6 @@ class FormsRequest extends FormRequest
     {
         return [
             'sections.*.section.distinct' => 'Section title must be unique. Duplicate section title found.',
-            'sections.*.section.required' => 'Section title is required.',
         ];
     }
 }

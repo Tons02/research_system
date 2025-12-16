@@ -46,6 +46,7 @@ class SurveyAnswerExport implements FromCollection, WithHeadings, WithTitle, Wit
                 'question_answers.section',
                 'survey_answers.target_location_id',
                 'survey_answers.date',
+                'survey_answers.sync_at',
                 'survey_answers.surveyor_id', // ✅ include surveyor id
                 DB::raw("CONCAT(users.first_name, ' ', COALESCE(users.middle_name, ''), ' ', users.last_name) as surveyor_name"), // ✅ concat full name
                 'question_answers.question',
@@ -83,6 +84,7 @@ class SurveyAnswerExport implements FromCollection, WithHeadings, WithTitle, Wit
                     'name' => $item->name,
                     'target_location_id' => $item->target_location_id,
                     'date' => $item->date,
+                    'sync_at' => $item->sync_at,
                     'surveyor_id' => $item->surveyor_id,
                     'surveyor' => trim(preg_replace('/\s+/', ' ', $item->surveyor_name)),
                     'sections' => []
@@ -117,7 +119,8 @@ class SurveyAnswerExport implements FromCollection, WithHeadings, WithTitle, Wit
                 'date' => $surveyGroup['date'],
                 'surveyor_id' => $surveyGroup['surveyor_id'],
                 'surveyor' => $surveyGroup['surveyor'],
-                'sections' => $sectionsArray
+                'sections' => $sectionsArray,
+                'sync_at' => $surveyGroup['sync_at'],
             ];
         }
 
@@ -143,6 +146,7 @@ class SurveyAnswerExport implements FromCollection, WithHeadings, WithTitle, Wit
             'Answer',
             'Researcher ID',
             'Researcher Name',
+            'Sync Date',
         ];
     }
 
@@ -169,9 +173,10 @@ class SurveyAnswerExport implements FromCollection, WithHeadings, WithTitle, Wit
                 $sheet->setCellValue('F1', 'Answer');
                 $sheet->setCellValue('G1', 'Researcher ID');
                 $sheet->setCellValue('H1', 'Researcher');
+                $sheet->setCellValue('I1', 'Sync Date');
 
                 // Style headers
-                $sheet->getStyle("A1:H1")->applyFromArray([
+                $sheet->getStyle("A1:I1")->applyFromArray([
                     'font' => ['bold' => true, 'size' => 12, 'name' => 'Century Gothic'],
                     'fill' => [
                         'fillType' => Fill::FILL_SOLID,
@@ -233,10 +238,11 @@ class SurveyAnswerExport implements FromCollection, WithHeadings, WithTitle, Wit
                             // ✅ New surveyor columns
                             $sheet->setCellValue("G{$row}", $respondent['surveyor_id']);
                             $sheet->setCellValue("H{$row}", $respondent['surveyor']);
+                            $sheet->setCellValue("I{$row}", $respondent['sync_at'] ? Carbon::parse($respondent['sync_at'])->format('M d, Y h:i A') : 'N/A');
 
 
                             // Apply styles
-                            $sheet->getStyle("A{$row}:H{$row}")->applyFromArray([
+                            $sheet->getStyle("A{$row}:I{$row}")->applyFromArray([
                                 'font' => ['name' => 'Century Gothic', 'size' => 10],
                                 'fill' => [
                                     'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
@@ -256,12 +262,13 @@ class SurveyAnswerExport implements FromCollection, WithHeadings, WithTitle, Wit
                 $sheet->getColumnDimension('D')->setWidth(20);
                 $sheet->getColumnDimension('E')->setWidth(110);
                 $sheet->getColumnDimension('F')->setWidth(40);
-                $sheet->getColumnDimension('G')->setWidth(17);  // Researcher ID
-                $sheet->getColumnDimension('H')->setWidth(40);  // Researcher Name
+                $sheet->getColumnDimension('G')->setWidth(17);
+                $sheet->getColumnDimension('H')->setWidth(40);
+                $sheet->getColumnDimension('I')->setWidth(25);
 
                 // Border styling for all cells with data
                 $lastRow = $row - 1;
-                $sheet->getStyle("A1:H{$lastRow}")->getBorders()->getAllBorders()
+                $sheet->getStyle("A1:I{$lastRow}")->getBorders()->getAllBorders()
                     ->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN);
             },
         ];

@@ -37,7 +37,7 @@ class RoleRequest extends FormRequest
                 "min:1", // Ensure at least one permission is selected
                 function ($attribute, $value, $fail) {
                     $allowedValues = [
-                        "dashboard",
+                        "dashboard:all",
                         "masterlist",
                         "masterlist:one-charging:sync",
                         "masterlist:user-accounts:crud",

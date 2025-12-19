@@ -91,22 +91,6 @@ class UserController extends Controller
         if (!$user) {
             return $this->responseUnprocessable('', 'Invalid id please check the id and try again.');
         }
-        if (DB::table('target_locations_users')
-            ->where('user_id', $id)
-            ->where('is_done', 0)
-            ->where('deleted_at', null)
-            ->exists()
-        ) {
-            return $this->responseUnprocessable('', 'Unable to archive. The user is tagged to an active target location.');
-        }
-
-        if (TargetLocation::orwhere('vehicle_counted_by_user_id', $id)
-            ->where('is_done', 0)
-            ->orwhere('foot_counted_by_user_id', $id)
-            ->exists()
-        ) {
-            return $this->responseUnprocessable('', 'Unable to archive. The user is tagged to an active target location.');
-        }
 
         if ($user->deleted_at) {
 

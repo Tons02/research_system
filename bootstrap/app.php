@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\ApiKeyMiddleware;
 use App\Http\Middleware\Authenticate;
 use App\Http\Middleware\OneRdfAuthenticate;
 use Illuminate\Foundation\Application;
@@ -21,6 +22,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'ability' => CheckForAnyAbility::class,
             'auth' => Authenticate::class,
             'onerdf' => OneRdfAuthenticate::class,
+            'check.apikey' => ApiKeyMiddleware::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

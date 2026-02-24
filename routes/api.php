@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\FormController;
 use App\Http\Controllers\Api\FormHistoriesController;
 use App\Http\Controllers\Api\OneChargingController;
+use App\Http\Controllers\Api\PendingUserController;
 use App\Http\Controllers\Api\QuestionAnswerController;
 use App\Http\Controllers\Api\SurveyAnswerController;
 use App\Http\Controllers\Api\TargetLocationController;
@@ -39,6 +40,12 @@ Route::post('login', [AuthController::class, 'login']);
 // Route::post('logout', [AuthController::class, 'logout']);
 // Route::patch('resetpassword/{id}', [AuthController::class, 'resetPassword'])->middleware(['abilities:user-management:user-accounts:crud']);
 
+// One Charging One RDF
+Route::middleware('onerdf')->post('sync_charging', [OneChargingController::class, 'sync_from_one_rdf']);
+Route::middleware('onerdf')->post('pending-user', [PendingUserController::class, 'store']);
+Route::middleware('onerdf')->patch('changepass/{id_prefix_id_no}', [PendingUserController::class, 'change_password']);
+Route::middleware('onerdf')->patch('reset/{id_prefix_id_no}', [PendingUserController::class, 'reset_password']);
+
 Route::middleware('onerdf')->post('sync_charging', [OneChargingController::class, 'sync_from_one_rdf']);
 
 
@@ -54,6 +61,10 @@ Route::middleware(['auth:sanctum'])->group(function () {
     // User Controller
     Route::put('user-archived/{id}', [UserController::class, 'archived'])->middleware(['abilities:masterlist:user-accounts:crud']);
     Route::get('users-export', [UserController::class, 'export'])->middleware(['abilities:masterlist:user-accounts:crud']);
+
+    //Pending User Controller
+    Route::get("pending-user", [PendingUserController::class, 'index']);
+
     Route::get('user', [UserController::class, 'index']);
     // Protected resource routes (CRUD operations require middleware)
     Route::middleware(['abilities:masterlist:user-accounts:crud'])->group(function () {

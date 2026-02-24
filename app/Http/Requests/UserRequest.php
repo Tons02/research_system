@@ -42,7 +42,6 @@ class UserRequest extends FormRequest
                 "required",
                 "unique:users,username," . $this->route()->user,
             ],
-
             "role_id" => ["required", "exists:roles,id"],
         ];
     }

@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Http\Requests\UserRequest;
 use App\Http\Resources\UserResource;
+use App\Models\PendingUser;
 use App\Models\TargetLocation;
 use Essa\APIToolKit\Api\ApiResponse;
 use App\Models\User;
@@ -54,6 +55,14 @@ class UserController extends Controller
 
             "role_id" => $request["role_id"],
         ]);
+
+        PendingUser::where('id_no', $request["personal_info"]["id_no"])
+            ->where('id_prefix', $request["personal_info"]["id_prefix"])
+            ->update(['is_created' => 1]);
+
+        PendingUser::where('id_no', $request["personal_info"]["id_no"])
+            ->where('id_prefix', $request["personal_info"]["id_prefix"])
+            ->delete();
 
         return $this->responseCreated('User Successfully Created', $create_user);
     }

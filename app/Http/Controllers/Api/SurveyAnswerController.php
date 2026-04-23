@@ -32,7 +32,7 @@ class SurveyAnswerController extends Controller
         $SurveyAnswer = SurveyAnswer::when($status === "inactive", function ($query) {
             $query->onlyTrashed();
         })
-            // ->orderBy('created_at', 'desc') wag mo kalimutan i uncomment to
+            ->orderBy('created_at', 'desc')
             ->useFilters()
             ->dynamicPaginate();
 

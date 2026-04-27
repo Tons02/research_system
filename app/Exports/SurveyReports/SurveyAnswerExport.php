@@ -157,7 +157,10 @@ class SurveyAnswerExport implements WithTitle, WithEvents
                     ->setHorizontal(Alignment::HORIZONTAL_CENTER);
 
                 // Taller header row height
-                $sheet->getRowDimension(1)->setRowHeight(80);
+                $sheet->getRowDimension(1)->setRowHeight(70);
+
+                // ── Freeze header row (sticky header) ─────────────────────
+                $sheet->freezePane('A2');
 
                 // ── Write data rows ────────────────────────────────────────
                 $colors            = ['DCE6F1', 'DFFFD6'];

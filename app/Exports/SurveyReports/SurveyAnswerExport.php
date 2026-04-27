@@ -9,6 +9,7 @@ use Maatwebsite\Excel\Concerns\WithEvents;
 use Maatwebsite\Excel\Concerns\WithTitle;
 use Maatwebsite\Excel\Events\AfterSheet;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
+use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Cell\DataType;
 
 class SurveyAnswerExport implements WithTitle, WithEvents
@@ -54,8 +55,10 @@ class SurveyAnswerExport implements WithTitle, WithEvents
                 'survey_answers.surveyor_id',
                 DB::raw("CONCAT(users.first_name, ' ', COALESCE(users.middle_name, ''), ' ', users.last_name) as surveyor_name"),
                 'question_answers.question',
-                'question_answers.answer'
+                'question_answers.answer',
+                'question_answers.id as question_id' // ← required for DISTINCT + ORDER BY
             )
+            ->distinct()
             ->when($target_location_id, fn($q) => $q->where('survey_answers.target_location_id', $target_location_id))
             ->when($this->surveyor_id,  fn($q) => $q->where('survey_answers.surveyor_id', $this->surveyor_id))
             ->when($this->start_date && $this->end_date, fn($q) =>
@@ -69,7 +72,7 @@ class SurveyAnswerExport implements WithTitle, WithEvents
             ->get();
 
         $groupedBySurvey = [];
-        $allQuestions    = []; // Preserves insertion order across all surveys
+        $allQuestions    = [];
 
         foreach ($data as $item) {
             $surveyId = $item->survey_id;
@@ -82,7 +85,7 @@ class SurveyAnswerExport implements WithTitle, WithEvents
                     'sync_at'     => $item->sync_at,
                     'surveyor_id' => $item->surveyor_id,
                     'surveyor'    => trim(preg_replace('/\s+/', ' ', $item->surveyor_name)),
-                    'answers'     => [], // question => answer (or array of answers for repeated questions)
+                    'answers'     => [],
                 ];
             }
 
@@ -99,16 +102,8 @@ class SurveyAnswerExport implements WithTitle, WithEvents
                 $allQuestions[$question] = true;
             }
 
-            // Handle duplicate questions (same question, multiple answers) by appending
-            if (isset($groupedBySurvey[$surveyId]['answers'][$question])) {
-                $existing = $groupedBySurvey[$surveyId]['answers'][$question];
-                if (!is_array($existing)) {
-                    $groupedBySurvey[$surveyId]['answers'][$question] = [$existing];
-                }
-                $groupedBySurvey[$surveyId]['answers'][$question][] = $answer;
-            } else {
-                $groupedBySurvey[$surveyId]['answers'][$question] = $answer;
-            }
+            // Simple assign — no duplicate appending
+            $groupedBySurvey[$surveyId]['answers'][$question] = $answer;
         }
 
         return [$groupedBySurvey, array_keys($allQuestions)];
@@ -141,7 +136,9 @@ class SurveyAnswerExport implements WithTitle, WithEvents
                     $sheet->setCellValue("{$colLetter}1", $header);
                 }
 
-                $lastCol = $this->columnLetter(count($headers));
+                $lastCol        = $this->columnLetter(count($headers));
+                $lastFixedCol   = $this->columnLetter(count($fixedHeaders));
+                $firstAnswerCol = $this->columnLetter(count($fixedHeaders) + 1);
 
                 // Style headers
                 $sheet->getStyle("A1:{$lastCol}1")->applyFromArray([
@@ -152,12 +149,12 @@ class SurveyAnswerExport implements WithTitle, WithEvents
                     ],
                 ]);
 
-                // Wrap text & align top for headers
+                // Wrap text & align top-center for headers
                 $sheet->getStyle("A1:{$lastCol}1")
                     ->getAlignment()
                     ->setWrapText(true)
-                    ->setVertical(\PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_TOP)
-                    ->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+                    ->setVertical(Alignment::VERTICAL_TOP)
+                    ->setHorizontal(Alignment::HORIZONTAL_CENTER);
 
                 // Taller header row height
                 $sheet->getRowDimension(1)->setRowHeight(80);
@@ -192,11 +189,6 @@ class SurveyAnswerExport implements WithTitle, WithEvents
                         $colLetter = $this->columnLetter(count($fixedHeaders) + $qIndex + 1);
                         $answer    = $survey['answers'][$question] ?? 'N/A';
 
-                        // Join multiple answers with a separator
-                        if (is_array($answer)) {
-                            $answer = implode(' | ', $answer);
-                        }
-
                         // Phone number / long numeric formatting
                         if ((is_numeric($answer) && strlen((string) $answer) > 11) || str_starts_with((string) $answer, '+')) {
                             $sheet->setCellValueExplicit("{$colLetter}{$row}", (string) $answer, DataType::TYPE_STRING);
@@ -205,7 +197,7 @@ class SurveyAnswerExport implements WithTitle, WithEvents
                         }
                     }
 
-                    // Apply row styling
+                    // Apply font & fill to entire row
                     $sheet->getStyle("A{$row}:{$lastCol}{$row}")->applyFromArray([
                         'font' => ['name' => 'Century Gothic', 'size' => 10],
                         'fill' => [
@@ -214,10 +206,18 @@ class SurveyAnswerExport implements WithTitle, WithEvents
                         ],
                     ]);
 
-                    // Align data rows to top, wrap text, consistent height
-                    $sheet->getStyle("A{$row}:{$lastCol}{$row}")
+                    // Fixed columns — center aligned
+                    $sheet->getStyle("A{$row}:{$lastFixedCol}{$row}")
                         ->getAlignment()
-                        ->setVertical(\PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_TOP)
+                        ->setVertical(Alignment::VERTICAL_TOP)
+                        ->setHorizontal(Alignment::HORIZONTAL_CENTER)
+                        ->setWrapText(true);
+
+                    // Answer columns — left aligned
+                    $sheet->getStyle("{$firstAnswerCol}{$row}:{$lastCol}{$row}")
+                        ->getAlignment()
+                        ->setVertical(Alignment::VERTICAL_TOP)
+                        ->setHorizontal(Alignment::HORIZONTAL_LEFT)
                         ->setWrapText(true);
 
                     $sheet->getRowDimension($row)->setRowHeight(40);

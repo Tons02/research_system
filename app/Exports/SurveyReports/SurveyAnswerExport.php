@@ -33,6 +33,16 @@ class SurveyAnswerExport implements WithTitle, WithEvents
     /**
      * Fetch and group all survey data.
      * Returns [ groupedBySurvey[], allQuestions[] ]
+     *
+     * Key behaviour:
+     *  - Columns are keyed as "Section - Question"
+     *  - If the same question appears more than once inside the same section
+     *    for a given survey, each occurrence gets its own column:
+     *      "Pork Section - How many kg?"
+     *      "Pork Section - How many kg? (2)"
+     *      "Pork Section - How many kg? (3)"  ... and so on
+     *  - The global $allQuestions array collects every unique column key
+     *    across ALL surveys so every column is represented in the header row.
      */
     private function fetchData(): array
     {
@@ -56,7 +66,7 @@ class SurveyAnswerExport implements WithTitle, WithEvents
                 DB::raw("CONCAT(users.first_name, ' ', COALESCE(users.middle_name, ''), ' ', users.last_name) as surveyor_name"),
                 'question_answers.question',
                 'question_answers.answer',
-                'question_answers.id as question_id' // ← required for DISTINCT + ORDER BY
+                'question_answers.id as question_id'
             )
             ->distinct()
             ->when($target_location_id, fn($q) => $q->where('survey_answers.target_location_id', $target_location_id))
@@ -72,7 +82,7 @@ class SurveyAnswerExport implements WithTitle, WithEvents
             ->get();
 
         $groupedBySurvey = [];
-        $allQuestions    = [];
+        $allQuestions    = []; // Ordered map of every unique column key => true
 
         foreach ($data as $item) {
             $surveyId = $item->survey_id;
@@ -89,21 +99,41 @@ class SurveyAnswerExport implements WithTitle, WithEvents
                 ];
             }
 
-            $question = $item->question;
+            $question = trim($item->question);
+            $section  = trim($item->section ?? '');
             $answer   = ($item->answer === '' || $item->answer === null) ? 'N/A' : $item->answer;
 
             // Override name question with the respondent's name
-            if (strtolower(trim($question)) === 'name') {
+            if (strtolower($question) === 'name') {
                 $answer = $item->name;
             }
 
-            // Track unique question order globally
-            if (!isset($allQuestions[$question])) {
-                $allQuestions[$question] = true;
+            // Base column key: "Section - Question" (or just "Question" if no section)
+            $baseKey = $section !== '' ? "{$section} - {$question}" : $question;
+
+            // Count how many times this base key already appears in THIS survey's answers.
+            // Strip trailing " (N)" suffix before comparing so we always match the base.
+            $occurrenceInSurvey = 0;
+            foreach ($groupedBySurvey[$surveyId]['answers'] as $existingKey => $_) {
+                if (preg_replace('/ \(\d+\)$/', '', $existingKey) === $baseKey) {
+                    $occurrenceInSurvey++;
+                }
             }
 
-            // Simple assign — no duplicate appending
-            $groupedBySurvey[$surveyId]['answers'][$question] = $answer;
+            // First occurrence  => "Pork Section - How many kg?"
+            // Second occurrence => "Pork Section - How many kg? (2)"
+            // Third  occurrence => "Pork Section - How many kg? (3)"
+            $questionKey = $occurrenceInSurvey === 0
+                ? $baseKey
+                : "{$baseKey} (" . ($occurrenceInSurvey + 1) . ")";
+
+            // Register the column globally so it appears in the header row
+            if (!isset($allQuestions[$questionKey])) {
+                $allQuestions[$questionKey] = true;
+            }
+
+            // Assign answer to this survey row under the unique column key
+            $groupedBySurvey[$surveyId]['answers'][$questionKey] = $answer;
         }
 
         return [$groupedBySurvey, array_keys($allQuestions)];
@@ -188,9 +218,9 @@ class SurveyAnswerExport implements WithTitle, WithEvents
                     }
 
                     // Write dynamic question columns
-                    foreach ($allQuestions as $qIndex => $question) {
+                    foreach ($allQuestions as $qIndex => $questionKey) {
                         $colLetter = $this->columnLetter(count($fixedHeaders) + $qIndex + 1);
-                        $answer    = $survey['answers'][$question] ?? 'N/A';
+                        $answer    = $survey['answers'][$questionKey] ?? 'N/A';
 
                         // Phone number / long numeric formatting
                         if ((is_numeric($answer) && strlen((string) $answer) > 11) || str_starts_with((string) $answer, '+')) {

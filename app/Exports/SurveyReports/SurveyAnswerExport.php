@@ -153,7 +153,7 @@ class SurveyAnswerExport implements WithTitle, WithEvents
                     'Researcher',
                     'Sync Date',
                     'Survey ID',
-                    'Name',
+                    // 'Name',
                     'Date',
                 ];
 
@@ -207,7 +207,7 @@ class SurveyAnswerExport implements WithTitle, WithEvents
                         $survey['surveyor'],
                         $survey['sync_at'] ? Carbon::parse($survey['sync_at'])->format('M d, Y h:i A') : 'N/A',
                         $survey['survey_id'],
-                        $survey['name'],
+                        // $survey['name'],
                         Carbon::parse($survey['date'])->format('M d, Y h:i A'),
                     ];
 

@@ -344,76 +344,19 @@ class TargetLocationController extends Controller
             return $this->responseUnprocessable('', 'Invalid id please check the id and try again.');
         }
 
-        if (User::where('id', $target_location->vehicle_counted_by_user_id)
-            ->onlyTrashed()
-            ->exists()
-        ) {
-            return $this->responseUnprocessable('', 'Unable to restore. The user tagged on vehicle count is archived');
-        }
-
-        if (User::where('id', $target_location->foot_counted_by_user_id)
-            ->onlyTrashed()
-            ->exists()
-        ) {
-            return $this->responseUnprocessable('', 'Unable to restore. The user tagged on foot count is archived');
-        }
-
-        $userIds = TargetLocationUsers::withTrashed()
-            ->where('target_location_id', $target_location->id)
-            ->pluck('user_id');
-
-        // Fetch soft-deleted users from the Users model
-        $archivedUsers = User::onlyTrashed()
-            ->whereIn('id', $userIds)
-            ->get(['first_name', 'last_name']);
-
-        if ($archivedUsers->isNotEmpty()) {
-            $names = $archivedUsers
-                ->map(fn($user) => "{$user->first_name} {$user->last_name}")
-                ->implode(', ');
-
-            return $this->responseUnprocessable('', "Unable to restore. The following user(s) tagged as surveyor are archived: {$names}");
+        if ($target_location->is_final === 1 || $target_location->is_final === true) {
+            return $this->responseUnprocessable(
+                '',
+                'Cannot archive the survey because it is already final and has started.'
+            );
         }
 
         if ($target_location->deleted_at) {
 
-            if (TargetLocation::orwhere('vehicle_counted_by_user_id', $id)
-                ->where('is_done', 0)
-                ->orwhere('foot_counted_by_user_id', $id)
-                ->exists()
-            ) {
-                return $this->responseUnprocessable('', 'Unable to restore. Some users are already assigned to another active target location.');
-            }
-
-            // Get all users associated (including soft-deleted pivot records)
-            $userIds = TargetLocationUsers::withTrashed()
-                ->where('target_location_id', $target_location->id)
-                ->pluck('user_id');
-
-            // Check if any of these users are already assigned to another target location (not this one),
-            // where is_done = 0 and not soft-deleted
-            $conflict = TargetLocationUsers::whereIn('user_id', $userIds)
-                ->where('target_location_id', '!=', $target_location->id)
-                ->where('is_done', 0)
-                ->whereNull('deleted_at')
-                ->exists();
-
-            if ($conflict) {
-                return $this->responseUnprocessable('', 'Unable to restore. Some users are already assigned to another active target location.');
-            }
-
             $target_location->restore();
-
-            // Restore pivot records
-            foreach ($target_location->target_locations_users()->withTrashed()->get() as $user) {
-                if ($user->pivot->trashed()) {
-                    $user->pivot->restore();
-                }
-            }
 
             return $this->responseSuccess('Target Location successfully restored', $target_location);
         }
-
 
         // need to put this one once the survey answer is already created
         if (SurveyAnswer::where('target_location_id', $id)->exists()) {
@@ -423,23 +366,8 @@ class TargetLocationController extends Controller
 
         if (!$target_location->deleted_at) {
 
-            DB::beginTransaction();
-
-            try {
-
-                // $target_location->target_locations_users()->detach(); // instead of  detach i want to use softdelete so that if i want to restore them i can just remove the soft delte
-                $target_location->delete();
-
-                foreach ($target_location->target_locations_users as $user) {
-                    $user->pivot->delete(); // soft deletes the pivot
-                }
-
-                DB::commit();
-                return $this->responseSuccess('Target Location successfully archived', $target_location);
-            } catch (\Exception $e) {
-                DB::rollBack();
-                return $this->responseServerError('Network Error Please Try Again');
-            }
+            $target_location->delete();
+            return $this->responseSuccess('Target Location successfully archived', $target_location);
         }
     }
 
